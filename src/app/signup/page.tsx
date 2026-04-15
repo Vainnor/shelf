@@ -11,7 +11,7 @@ export default async function SignUpPage() {
   })
 
   if (session) {
-    redirect("/")
+    redirect("/dashboard")
   }
 
   const providers = getEnabledAuthProviders()

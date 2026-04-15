@@ -65,6 +65,45 @@ export async function updateBookStatus(userId: string, bookId: string, status: B
   return book
 }
 
+export async function updateBook(userId: string, bookId: string, input: Partial<BookInput>) {
+  type UpdateData = {
+    updatedAt: Date
+    title?: string
+    author?: string
+    totalPages?: number | null
+    currentPage?: number
+    status?: BookStatus
+    finishedAt?: Date | null
+    startedAt?: Date | null
+    isbn?: string | null
+    coverUrl?: string | null
+    notes?: string | null
+  }
+
+  const updateData: UpdateData = { updatedAt: new Date() }
+
+  if (input.title !== undefined) updateData.title = input.title
+  if (input.author !== undefined) updateData.author = input.author
+  if (input.totalPages !== undefined) updateData.totalPages = input.totalPages
+  if (input.currentPage !== undefined) updateData.currentPage = input.currentPage
+  if (input.status !== undefined) {
+    updateData.status = input.status
+    if (input.status === "read") updateData.finishedAt = new Date()
+    if (input.status === "reading") updateData.startedAt = new Date()
+  }
+  if (input.isbn !== undefined) updateData.isbn = input.isbn
+  if (input.coverUrl !== undefined) updateData.coverUrl = input.coverUrl
+  if (input.notes !== undefined) updateData.notes = input.notes
+
+  const [book] = await db
+    .update(booksTable)
+    .set(updateData)
+    .where(and(eq(booksTable.id, bookId), eq(booksTable.userId, userId)))
+    .returning()
+
+  return book
+}
+
 export async function deleteBook(userId: string, bookId: string) {
   const [book] = await db
     .delete(booksTable)
@@ -74,6 +113,4 @@ export async function deleteBook(userId: string, bookId: string) {
   return book
 }
 
-
 export { bookStatuses }
-

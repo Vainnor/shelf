@@ -99,25 +99,30 @@ const socialProviderDefinitions: SocialProviderDefinition[] = [
     label: "Notion",
     env: { clientId: "NOTION_CLIENT_ID", clientSecret: "NOTION_CLIENT_SECRET" },
   },
-  {
-    id: "tiktok",
-    label: "TikTok",
-    env: { clientId: "TIKTOK_CLIENT_ID", clientSecret: "TIKTOK_CLIENT_SECRET" },
-  },
 ]
 
-function hasValue(value: string | undefined) {
+function hasValue(value: string | undefined): value is string {
   return Boolean(value && value.trim().length > 0)
+}
+
+function getEnvValue(name: string) {
+  const value = process.env[name]
+
+  if (!hasValue(value)) {
+    return null
+  }
+
+  return value.trim()
 }
 
 export function getEnabledSocialProvidersConfig() {
   const providers: Record<string, { clientId: string; clientSecret: string }> = {}
 
   for (const provider of socialProviderDefinitions) {
-    const clientId = process.env[provider.env.clientId]
-    const clientSecret = process.env[provider.env.clientSecret]
+    const clientId = getEnvValue(provider.env.clientId)
+    const clientSecret = getEnvValue(provider.env.clientSecret)
 
-    if (!hasValue(clientId) || !hasValue(clientSecret)) {
+    if (!clientId || !clientSecret) {
       continue
     }
 
@@ -138,14 +143,14 @@ function formatProviderLabel(providerId: string) {
 }
 
 function parseCustomOAuthProviders() {
-  const raw = process.env.CUSTOM_OAUTH_PROVIDERS_JSON
+  const rawConfig = getEnvValue("CUSTOM_OAUTH_PROVIDERS_JSON")
 
-  if (!hasValue(raw)) {
+  if (!rawConfig) {
     return []
   }
 
   try {
-    const parsed = JSON.parse(raw)
+    const parsed = JSON.parse(rawConfig)
 
     if (!Array.isArray(parsed)) {
       return []
@@ -165,15 +170,19 @@ function parseCustomOAuthProviders() {
 }
 
 export function getCustomOAuthProvidersConfig(): GenericOAuthConfig[] {
-  return parseCustomOAuthProviders().map(({ label: _label, ...provider }) => provider)
+  return parseCustomOAuthProviders().map((provider) => {
+    const { label, ...config } = provider
+    void label
+    return config
+  })
 }
 
 export function getEnabledAuthProviders(): AuthProviderOption[] {
   const social = socialProviderDefinitions
     .filter((provider) => {
-      const clientId = process.env[provider.env.clientId]
-      const clientSecret = process.env[provider.env.clientSecret]
-      return hasValue(clientId) && hasValue(clientSecret)
+      const clientId = getEnvValue(provider.env.clientId)
+      const clientSecret = getEnvValue(provider.env.clientSecret)
+      return Boolean(clientId && clientSecret)
     })
     .map((provider) => ({
       id: provider.id,

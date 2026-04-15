@@ -57,7 +57,7 @@ export default function Page() {
 
           <div className="flex flex-wrap gap-3">
             <Link
-              href="/login"
+              href="/dashboard"
               className={cn(buttonVariants({ variant: "default", size: "default" }), "gap-2")}
             >
               Get started

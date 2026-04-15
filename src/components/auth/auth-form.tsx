@@ -38,15 +38,24 @@ export default function AuthForm({ mode, providers }: AuthFormProps) {
     startTransition(async () => {
       const result =
         mode === "signup"
-          ? await authClient.signUp.email({ name, email, password, callbackURL: "/" })
-          : await authClient.signIn.email({ email, password, callbackURL: "/" })
+          ? await authClient.signUp.email({
+              name,
+              email,
+              password,
+              callbackURL: "/dashboard",
+            })
+          : await authClient.signIn.email({
+              email,
+              password,
+              callbackURL: "/dashboard",
+            })
 
       if (result?.error) {
         setError(result.error.message ?? "Authentication failed")
         return
       }
 
-      router.push("/")
+      router.push("/dashboard")
       router.refresh()
     })
   }
@@ -60,12 +69,12 @@ export default function AuthForm({ mode, providers }: AuthFormProps) {
         provider.kind === "social"
           ? await client.signIn.social({
               provider: provider.id,
-              callbackURL: "/",
+              callbackURL: "/dashboard",
               errorCallbackURL: mode === "signup" ? "/signup" : "/login",
             })
           : await client.signIn.oauth2({
               providerId: provider.id,
-              callbackURL: "/",
+              callbackURL: "/dashboard",
               errorCallbackURL: mode === "signup" ? "/signup" : "/login",
             })
 
