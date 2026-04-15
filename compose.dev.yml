@@ -1,0 +1,66 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: shelf
+      POSTGRES_USER: shelf
+      POSTGRES_PASSWORD: shelf
+    ports:
+        - "5432:5432"
+    volumes:
+      - shelf-dev-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shelf -d shelf"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      target: migrator
+    restart: "no"
+    environment:
+      DATABASE_URL: postgres://shelf:shelf@db:5432/shelf
+    depends_on:
+      db:
+        condition: service_healthy
+    command: pnpm drizzle-kit push
+
+  app:
+    build:
+      context: .
+      target: dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://shelf:shelf@db:5432/shelf
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:8080}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-shelf-development-secret-change-me}
+      NEXT_PUBLIC_APP_VERSION: ${APP_VERSION:-0.0.1}.${GIT_SHA:-dev}
+    command: pnpm dev
+    volumes:
+      - .:/app
+      - shelf-dev-node-modules:/app/node_modules
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_started
+    ports:
+      - "8080:80"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+
+volumes:
+  shelf-dev-postgres:
+  shelf-dev-node-modules:
+
