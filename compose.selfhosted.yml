@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: shelf
+      POSTGRES_USER: shelf
+      POSTGRES_PASSWORD: shelf
+    volumes:
+      - shelf-selfhost-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shelf -d shelf"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    image: ${APP_IMAGE:-ghcr.io/your-org/shelf}:${APP_TAG:-0.0.1-dev}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      DATABASE_URL: postgres://shelf:shelf@db:5432/shelf
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-change-me-before-self-hosting}
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "3000"
+    ports:
+      - "3000:3000"
+
+volumes:
+  shelf-selfhost-postgres:
+

@@ -45,6 +45,52 @@ DATABASE_URL=
 pnpm dev
 ```
 
+## Docker Compose
+
+### Local development
+
+Uses the app container, Postgres, and Caddy on port `8080`.
+
+```bash
+docker compose -f compose.dev.yml up --build
+```
+
+### Production-style local run
+
+Uses the production image target with Caddy on port `80`.
+
+```bash
+docker compose -f compose.prod.yml up --build
+```
+
+### Self-hosted deployment
+
+Run only the app and database when you want to place your own proxy in front of it.
+
+```bash
+docker compose -f compose.selfhosted.yml up -d
+```
+
+If you want the bundled Caddy config for self-hosting, add the optional overlay:
+
+```bash
+docker compose -f compose.selfhosted.yml -f compose.selfhosted.caddy.override.yml up -d
+```
+
+### Image versioning
+
+Container image tags follow this pattern:
+
+```text
+<package.json version>.<git short sha>
+```
+
+Example:
+
+```text
+0.0.1.abc123def456
+```
+
 ## Migrations
 
 ```bash
