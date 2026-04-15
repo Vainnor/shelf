@@ -84,9 +84,3 @@ export const verificationTokensTable = pgTable(
   })
 )
 
-export const authSchema = {
-  user: usersTable,
-  session: sessionsTable,
-  account: accountsTable,
-  verification: verificationTokensTable,
-} as const

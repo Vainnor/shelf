@@ -1,10 +1,11 @@
-import { Geist, Geist_Mono, Inter } from "next/font/google"
+import type { Metadata } from "next"
+import { Geist_Mono, Inter } from "next/font/google"
 
 import "./globals.css"
 import { ThemeProvider } from "@/src/components/theme-provider"
 import { cn } from "@/src/lib/utils"
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Shelf",
   description: "Track the books you want to read, are reading, and have finished.",
 }

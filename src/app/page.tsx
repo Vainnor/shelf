@@ -90,7 +90,7 @@ export default function Page() {
             </Card>
           ))}
         </div>
-      </div>
+      </section>
     </main>
   )
 }

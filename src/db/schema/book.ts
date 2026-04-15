@@ -2,7 +2,9 @@ import { index, integer, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg
 
 import { usersTable } from "./user"
 
-export const bookStatusEnum = pgEnum("book_status", ["to_read", "reading", "read"])
+export const bookStatuses = ["to_read", "reading", "read"] as const
+
+export const bookStatusEnum = pgEnum("book_status", bookStatuses)
 
 export const booksTable = pgTable(
   "books",
@@ -31,6 +33,4 @@ export const booksTable = pgTable(
   })
 )
 
-export const bookStatuses = ["to_read", "reading", "read"] as const
-export type BookStatus = (typeof bookStatuses)[number]
 

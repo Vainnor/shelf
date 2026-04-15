@@ -1,7 +1,9 @@
-import { desc, eq } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
 
 import { db } from "@/src/db"
-import { booksTable, type BookStatus, bookStatuses } from "@/src/db/schema/book"
+import { booksTable, bookStatuses } from "@/src/db/schema/book"
+
+export type BookStatus = (typeof bookStatuses)[number]
 
 export type BookInput = {
   title: string
@@ -15,10 +17,6 @@ export type BookInput = {
 }
 
 export async function listBooksForUser(userId: string, status?: BookStatus) {
-  const where = status
-    ? eq(booksTable.status, status)
-    : eq(booksTable.userId, userId)
-
   if (status) {
     return db.query.books.findMany({
       where: (books, { and, eq }) => and(eq(books.userId, userId), eq(books.status, status)),
@@ -61,12 +59,8 @@ export async function updateBookStatus(userId: string, bookId: string, status: B
       finishedAt: status === "read" ? new Date() : null,
       startedAt: status === "reading" ? new Date() : undefined,
     })
-    .where(eq(booksTable.id, bookId))
+    .where(and(eq(booksTable.id, bookId), eq(booksTable.userId, userId)))
     .returning()
-
-  if (book?.userId !== userId) {
-    return null
-  }
 
   return book
 }
@@ -74,21 +68,12 @@ export async function updateBookStatus(userId: string, bookId: string, status: B
 export async function deleteBook(userId: string, bookId: string) {
   const [book] = await db
     .delete(booksTable)
-    .where(eq(booksTable.id, bookId))
+    .where(and(eq(booksTable.id, bookId), eq(booksTable.userId, userId)))
     .returning()
-
-  if (book?.userId !== userId) {
-    return null
-  }
 
   return book
 }
 
-export const bookShelfColumns = [
-  { status: "to_read" as const, label: "To read" },
-  { status: "reading" as const, label: "Currently reading" },
-  { status: "read" as const, label: "Read" },
-]
 
 export { bookStatuses }
 

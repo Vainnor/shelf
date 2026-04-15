@@ -1,7 +1,12 @@
 import { drizzle } from "drizzle-orm/node-postgres"
 import { Pool } from "pg"
 
-import { authSchema } from "./schema/user"
+import {
+  accountsTable,
+  sessionsTable,
+  usersTable,
+  verificationTokensTable,
+} from "./schema/user"
 import { booksTable } from "./schema/book"
 
 const globalForDb = globalThis as typeof globalThis & {
@@ -19,7 +24,10 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export const schema = {
-  ...authSchema,
+  user: usersTable,
+  session: sessionsTable,
+  account: accountsTable,
+  verification: verificationTokensTable,
   books: booksTable,
 } as const
 
