@@ -15,7 +15,9 @@ import ProfileMenu from "@/src/components/auth/profile-menu"
 export const dynamic = "force-dynamic"
 
 type Book = typeof booksTable.$inferSelect
-type Session = { user: { id: string; email: string; name?: string; role?: "user" | "admin" } } | null
+type Session = {
+  user: { id: string; email: string; name?: string; image?: string | null; role?: "user" | "admin" }
+} | null
 
 const statusColors = {
   to_read: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
@@ -154,6 +156,7 @@ export default function BookDetailPage() {
           <ProfileMenu
             name={session?.user?.name ?? ""}
             email={session?.user?.email ?? ""}
+            image={session?.user?.image}
             isAdmin={session?.user?.role === "admin"}
           />
         </div>

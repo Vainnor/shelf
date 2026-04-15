@@ -1,32 +1,14 @@
-import { ArrowLeft, Cog, Shield, UserRound } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
+import SettingsPanel from "@/src/components/settings/settings-panel"
 import { Badge } from "@/src/components/ui/badge"
 import { buttonVariants } from "@/src/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { requireAuthenticatedUser } from "@/src/lib/admin"
 import { cn } from "@/src/lib/utils"
 
-const settingsSections = [
-  {
-    icon: UserRound,
-    title: "Profile preferences",
-    description: "Display name and profile customization options.",
-  },
-  {
-    icon: Shield,
-    title: "Security",
-    description: "Password, provider linking, and session management controls.",
-  },
-  {
-    icon: Cog,
-    title: "Application",
-    description: "Reading defaults and dashboard behavior settings.",
-  },
-]
-
 export default async function SettingsPage() {
-  const { session } = await requireAuthenticatedUser()
+  const { session, user } = await requireAuthenticatedUser()
 
   return (
     <main className="min-h-svh bg-background p-6 lg:p-10">
@@ -35,9 +17,7 @@ export default async function SettingsPage() {
           <div>
             <Badge className="mb-2 w-fit">Settings</Badge>
             <h1 className="text-3xl font-semibold tracking-tight">Account settings</h1>
-            <p className="text-muted-foreground">
-              Settings are currently scaffolded for {session.user.email}.
-            </p>
+            <p className="text-muted-foreground">Manage your account settings for {session.user.email}.</p>
           </div>
 
           <Link
@@ -49,22 +29,12 @@ export default async function SettingsPage() {
           </Link>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          {settingsSections.map((section) => (
-            <Card key={section.title}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <section.icon className="size-4" />
-                  {section.title}
-                </CardTitle>
-                <CardDescription>{section.description}</CardDescription>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                Coming soon: configuration controls for this section.
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <SettingsPanel
+          initialName={user.name ?? ""}
+          initialEmail={user.email}
+          userId={user.id}
+          role={user.role}
+        />
       </section>
     </main>
   )

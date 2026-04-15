@@ -3,6 +3,7 @@
 import { BookOpen, Plus, UserRound, X } from "lucide-react"
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 import ProfileMenu from "@/src/components/auth/profile-menu"
 import { Badge } from "@/src/components/ui/badge"
@@ -23,7 +24,9 @@ import { getSession } from "@/src/actions/auth"
 export const dynamic = "force-dynamic"
 
 type Book = typeof booksTable.$inferSelect
-type Session = { user: { id: string; email: string; name?: string; role?: "user" | "admin" } } | null
+type Session = {
+  user: { id: string; email: string; name?: string; image?: string | null; role?: "user" | "admin" }
+} | null
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -86,10 +89,11 @@ export default function DashboardPage() {
       await addBook(data)
       await fetchBooks()
       setShowForm(false)
+      toast.success("Book added to your library.")
     } catch (error) {
       console.error("Error adding book:", error)
       setError("Failed to add book")
-      alert("Failed to add book")
+      toast.error("Failed to add book")
     } finally {
       setSubmitting(false)
     }
@@ -104,10 +108,11 @@ export default function DashboardPage() {
       await fetchBooks()
       setShowForm(false)
       setSelectedBook(undefined)
+      toast.success("Book updated.")
     } catch (error) {
       console.error("Error updating book:", error)
       setError("Failed to update book")
-      alert("Failed to update book")
+      toast.error("Failed to update book")
     } finally {
       setSubmitting(false)
     }
@@ -188,6 +193,7 @@ export default function DashboardPage() {
             <ProfileMenu
               name={session?.user?.name ?? ""}
               email={session?.user?.email ?? ""}
+              image={session?.user?.image}
               isAdmin={session?.user?.role === "admin"}
             />
           </div>

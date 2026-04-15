@@ -12,6 +12,7 @@ import { cn } from "@/src/lib/utils"
 type ProfileMenuProps = {
   name: string | null | undefined
   email: string | null | undefined
+  image?: string | null
   isAdmin?: boolean
 }
 
@@ -30,9 +31,14 @@ function getInitials(name: string | null | undefined, email: string | null | und
   return `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase()
 }
 
-export default function ProfileMenu({ name, email, isAdmin = false }: ProfileMenuProps) {
+export default function ProfileMenu({ name, email, image, isAdmin = false }: ProfileMenuProps) {
   const router = useRouter()
   const [isPending, startTransition] = React.useTransition()
+  const [avatarError, setAvatarError] = React.useState(false)
+
+  React.useEffect(() => {
+    setAvatarError(false)
+  }, [image])
 
   function handleSignOut() {
     startTransition(async () => {
@@ -52,9 +58,18 @@ export default function ProfileMenu({ name, email, isAdmin = false }: ProfileMen
           "list-none gap-2 pr-2 [&::-webkit-details-marker]:hidden"
         )}
       >
-        <span className="inline-flex size-7 items-center justify-center rounded-full bg-muted text-xs font-semibold uppercase">
-          {initials}
-        </span>
+        {image && !avatarError ? (
+          <img
+            src={image}
+            alt="Profile avatar"
+            className="size-7 rounded-full border border-border object-cover mt-1"
+            onError={() => setAvatarError(true)}
+          />
+        ) : (
+          <span className="inline-flex size-7 items-center justify-center rounded-full bg-muted text-xs font-semibold uppercase">
+            {initials}
+          </span>
+        )}
         <span className="hidden text-sm md:inline">Profile</span>
         <ChevronDown className="size-4" />
       </summary>
