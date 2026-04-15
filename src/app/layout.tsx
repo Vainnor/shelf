@@ -4,6 +4,7 @@ import { Geist_Mono, Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/src/components/theme-provider"
 import { cn } from "@/src/lib/utils"
+import { Toaster } from "@/src/components/ui/sonner"
 
 export const metadata: Metadata = {
   title: "Shelf",
@@ -31,6 +32,7 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           {children}
+          <Toaster position="bottom-right" richColors closeButton />
         </ThemeProvider>
       </body>
     </html>
