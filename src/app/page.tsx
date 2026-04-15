@@ -11,7 +11,10 @@ import {
   CardTitle,
 } from "@/src/components/ui/card"
 import { Separator } from "@/src/components/ui/separator"
+import { getSystemSettings } from "@/src/lib/admin"
 import { cn } from "@/src/lib/utils"
+
+export const dynamic = "force-dynamic"
 
 const shelves = [
   {
@@ -34,7 +37,10 @@ const shelves = [
   },
 ]
 
-export default function Page() {
+export default async function Page() {
+  const settings = await getSystemSettings()
+  const canUseSignup = settings.bootstrapCompleted && settings.signupsEnabled
+
   return (
     <main className="min-h-svh bg-background">
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10 lg:py-14">
@@ -63,13 +69,15 @@ export default function Page() {
               Get started
               <ArrowRight className="size-4" />
             </Link>
-            <Link
-              href="/signup"
-              className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}
-            >
-              Add your first book
-              <PencilLine className="size-4" />
-            </Link>
+            {canUseSignup ? (
+              <Link
+                href="/signup"
+                className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}
+              >
+                Add your first book
+                <PencilLine className="size-4" />
+              </Link>
+            ) : null}
           </div>
         </div>
 

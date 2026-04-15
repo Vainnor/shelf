@@ -18,11 +18,12 @@ import {
   changeBookStatus,
   removeBook,
 } from "@/src/actions/books"
+import { getSession } from "@/src/actions/auth"
 
 export const dynamic = "force-dynamic"
 
 type Book = typeof booksTable.$inferSelect
-type Session = { user: { id: string; email: string; name?: string } } | null
+type Session = { user: { id: string; email: string; name?: string; role?: "user" | "admin" } } | null
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -42,12 +43,11 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchSession = async () => {
       try {
-        const response = await fetch("/api/auth/get-session")
-        if (!response.ok) {
+        const sessionData = await getSession()
+        if (!sessionData) {
           router.push("/login")
           return
         }
-        const sessionData = await response.json()
         setSession(sessionData)
       } catch (error) {
         console.error("Error fetching session:", error)
@@ -185,7 +185,11 @@ export default function DashboardPage() {
               <BookOpen className="size-4" />
               <span className="hidden sm:inline">Library</span>
             </Button>
-            <ProfileMenu name={session?.user?.name ?? ""} email={session?.user?.email ?? ""} />
+            <ProfileMenu
+              name={session?.user?.name ?? ""}
+              email={session?.user?.email ?? ""}
+              isAdmin={session?.user?.role === "admin"}
+            />
           </div>
         </div>
 
@@ -287,26 +291,6 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-        )}
-
-        {session?.user && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserRound className="size-4" />
-                Account
-              </CardTitle>
-              <CardDescription>Current authenticated user details.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-1 text-sm">
-              <p>
-                <span className="font-medium">Email:</span> {session.user.email}
-              </p>
-              <p>
-                <span className="font-medium">User ID:</span> {session.user.id}
-              </p>
-            </CardContent>
-          </Card>
         )}
       </section>
     </main>

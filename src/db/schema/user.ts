@@ -1,16 +1,21 @@
 import {
   boolean,
   index,
+  pgEnum,
   pgTable,
   text,
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core"
 
+export const userRoleEnum = pgEnum("user_role", ["user", "admin"])
+
 export const usersTable = pgTable("users", {
   id: text("id").primaryKey(),
   name: text("name"),
   email: text("email").notNull().unique(),
+  role: userRoleEnum("role").notNull().default("user"),
+  isDisabled: boolean("is_disabled").notNull().default(false),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),

@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
 
+import { signUpWithEmail } from "@/src/actions/auth"
 import { authClient } from "@/src/lib/auth-client"
 import type { AuthProviderOption } from "@/src/lib/auth-providers"
 import { Button } from "@/src/components/ui/button"
@@ -15,9 +16,10 @@ type AuthMode = "login" | "signup"
 type AuthFormProps = {
   mode: AuthMode
   providers: AuthProviderOption[]
+  allowSignupLink?: boolean
 }
 
-export default function AuthForm({ mode, providers }: AuthFormProps) {
+export default function AuthForm({ mode, providers, allowSignupLink = true }: AuthFormProps) {
   const router = useRouter()
   const [name, setName] = React.useState("")
   const [email, setEmail] = React.useState("")
@@ -36,23 +38,24 @@ export default function AuthForm({ mode, providers }: AuthFormProps) {
     setError(null)
 
     startTransition(async () => {
-      const result =
-        mode === "signup"
-          ? await authClient.signUp.email({
-              name,
-              email,
-              password,
-              callbackURL: "/dashboard",
-            })
-          : await authClient.signIn.email({
-              email,
-              password,
-              callbackURL: "/dashboard",
-            })
+      if (mode === "signup") {
+        try {
+          await signUpWithEmail({ name, email, password })
+        } catch (caughtError) {
+          setError(caughtError instanceof Error ? caughtError.message : "Authentication failed")
+          return
+        }
+      } else {
+        const result = await authClient.signIn.email({
+          email,
+          password,
+          callbackURL: "/dashboard",
+        })
 
-      if (result?.error) {
-        setError(result.error.message ?? "Authentication failed")
-        return
+        if (result?.error) {
+          setError(result.error.message ?? "Authentication failed")
+          return
+        }
       }
 
       router.push("/dashboard")
@@ -156,12 +159,16 @@ export default function AuthForm({ mode, providers }: AuthFormProps) {
 
         <p className="text-sm text-muted-foreground">
           {mode === "signup" ? "Already have an account?" : "Need an account?"}{" "}
-          <Link
-            href={mode === "signup" ? "/login" : "/signup"}
-            className="underline underline-offset-4"
-          >
-            {mode === "signup" ? "Log in" : "Sign up"}
-          </Link>
+          {mode === "signup" || allowSignupLink ? (
+            <Link
+              href={mode === "signup" ? "/login" : "/signup"}
+              className="underline underline-offset-4"
+            >
+              {mode === "signup" ? "Log in" : "Sign up"}
+            </Link>
+          ) : (
+            <span className="text-foreground">Signups are disabled</span>
+          )}
         </p>
       </CardContent>
     </Card>

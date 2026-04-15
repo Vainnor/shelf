@@ -1,8 +1,10 @@
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { genericOAuth } from "better-auth/plugins"
+import { eq } from "drizzle-orm"
 
 import { db, schema } from "@/src/db"
+import { usersTable } from "@/src/db/schema/user"
 import {
   getCustomOAuthProvidersConfig,
   getEnabledSocialProvidersConfig,
@@ -22,6 +24,22 @@ export const auth = betterAuth({
     schema,
     usePlural: false,
   }),
+  databaseHooks: {
+    session: {
+      create: {
+        async before(session) {
+          const userId = String(session.userId)
+          const user = await db.query.user.findFirst({
+            where: eq(usersTable.id, userId),
+          })
+
+          if (!user || user.isDisabled) {
+            return false
+          }
+        },
+      },
+    },
+  },
   ...(Object.keys(socialProviders).length > 0
     ? { socialProviders: socialProviders as Record<string, unknown> }
     : {}),

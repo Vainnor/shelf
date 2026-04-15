@@ -1,6 +1,6 @@
 "use client"
 
-import { BookOpen, ChevronDown, LayoutDashboard, LogOut, Settings, UserRound } from "lucide-react"
+import { BookOpen, ChevronDown, LayoutDashboard, LogOut, Settings, Shield, UserRound } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
@@ -12,6 +12,7 @@ import { cn } from "@/src/lib/utils"
 type ProfileMenuProps = {
   name: string | null | undefined
   email: string | null | undefined
+  isAdmin?: boolean
 }
 
 function getInitials(name: string | null | undefined, email: string | null | undefined) {
@@ -29,7 +30,7 @@ function getInitials(name: string | null | undefined, email: string | null | und
   return `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase()
 }
 
-export default function ProfileMenu({ name, email }: ProfileMenuProps) {
+export default function ProfileMenu({ name, email, isAdmin = false }: ProfileMenuProps) {
   const router = useRouter()
   const [isPending, startTransition] = React.useTransition()
 
@@ -66,6 +67,16 @@ export default function ProfileMenu({ name, email }: ProfileMenuProps) {
           <LayoutDashboard className="size-4" />
           Dashboard
         </Link>
+
+        {isAdmin ? (
+          <Link
+            href="/admin"
+            className="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-muted"
+          >
+            <Shield className="size-4" />
+            Admin
+          </Link>
+        ) : null}
 
         <Link
           href="/library"

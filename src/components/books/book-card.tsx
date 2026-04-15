@@ -5,6 +5,7 @@ import { Button } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { Badge } from "@/src/components/ui/badge"
 import type { booksTable } from "@/src/db/schema/book"
+import type { BookStatus } from "@/src/lib/books"
 
 type Book = typeof booksTable.$inferSelect
 
@@ -31,7 +32,7 @@ const statusLabels = {
 export function BookCard({ book, onView, onEdit, onDelete, onStatusChange }: BookCardProps) {
   const progressPercent = book.totalPages ? Math.round((book.currentPage / book.totalPages) * 100) : 0
 
-  const getNextStatus = (current: string) => {
+  const getNextStatus = (current: BookStatus): BookStatus => {
     switch (current) {
       case "to_read":
         return "reading"
@@ -81,7 +82,7 @@ export function BookCard({ book, onView, onEdit, onDelete, onStatusChange }: Boo
           <Button
             size="sm"
             variant="outline"
-            onClick={() => onStatusChange(book.id, getNextStatus(book.status) as any)}
+            onClick={() => onStatusChange(book.id, getNextStatus(book.status))}
             className="flex-1 gap-1 text-xs"
           >
             <ArrowRight className="size-3" />

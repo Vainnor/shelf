@@ -1,22 +1,14 @@
 import { ArrowLeft, Mail, UserRound } from "lucide-react"
-import { headers } from "next/headers"
 import Link from "next/link"
-import { redirect } from "next/navigation"
 
 import { Badge } from "@/src/components/ui/badge"
 import { buttonVariants } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
-import { auth } from "@/src/lib/auth"
+import { requireAuthenticatedUser } from "@/src/lib/admin"
 import { cn } from "@/src/lib/utils"
 
 export default async function ProfilePage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
-
-  if (!session) {
-    redirect("/login")
-  }
+  const { session } = await requireAuthenticatedUser()
 
   return (
     <main className="min-h-svh bg-background p-6 lg:p-10">

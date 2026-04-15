@@ -11,7 +11,7 @@ RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 
 FROM base AS deps
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 
 FROM base AS dev
 ENV NODE_ENV=development

@@ -1,8 +1,6 @@
 "use server"
 
-import { headers } from "next/headers"
-
-import { auth } from "@/src/lib/auth"
+import { getActiveSession } from "@/src/lib/session"
 import {
   listBooksForUser,
   createBook,
@@ -13,14 +11,17 @@ import {
   type BookInput,
 } from "@/src/lib/books"
 
-export async function getBooks(status?: BookStatus) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
-
-  if (!session) {
+async function requireActiveSession() {
+  const activeSession = await getActiveSession()
+  if (!activeSession) {
     throw new Error("Unauthorized")
   }
+
+  return activeSession.session
+}
+
+export async function getBooks(status?: BookStatus) {
+  const session = await requireActiveSession()
 
   try {
     const books = await listBooksForUser(session.user.id, status)
@@ -60,13 +61,7 @@ function normalizeIsbn(isbn: string) {
 }
 
 export async function lookupBookByIsbn(rawIsbn: string): Promise<IsbnLookupResult> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
-
-  if (!session) {
-    throw new Error("Unauthorized")
-  }
+  await requireActiveSession()
 
   const isbn = normalizeIsbn(rawIsbn)
   if (!isbn || (isbn.length !== 10 && isbn.length !== 13)) {
@@ -137,13 +132,7 @@ export async function lookupBookByIsbn(rawIsbn: string): Promise<IsbnLookupResul
 }
 
 export async function addBook(input: BookInput) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
-
-  if (!session) {
-    throw new Error("Unauthorized")
-  }
+  const session = await requireActiveSession()
 
   try {
     const book = await createBook(session.user.id, input)
@@ -155,13 +144,7 @@ export async function addBook(input: BookInput) {
 }
 
 export async function editBook(bookId: string, input: Partial<BookInput>) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
-
-  if (!session) {
-    throw new Error("Unauthorized")
-  }
+  const session = await requireActiveSession()
 
   try {
     const book = await updateBook(session.user.id, bookId, input)
@@ -173,13 +156,7 @@ export async function editBook(bookId: string, input: Partial<BookInput>) {
 }
 
 export async function changeBookStatus(bookId: string, status: BookStatus) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
-
-  if (!session) {
-    throw new Error("Unauthorized")
-  }
+  const session = await requireActiveSession()
 
   try {
     const book = await updateBookStatus(session.user.id, bookId, status)
@@ -191,13 +168,7 @@ export async function changeBookStatus(bookId: string, status: BookStatus) {
 }
 
 export async function removeBook(bookId: string) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
-
-  if (!session) {
-    throw new Error("Unauthorized")
-  }
+  const session = await requireActiveSession()
 
   try {
     const book = await deleteBook(session.user.id, bookId)

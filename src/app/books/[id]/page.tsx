@@ -9,12 +9,13 @@ import { Button } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import type { booksTable } from "@/src/db/schema/book"
 import { getBooks, removeBook, changeBookStatus } from "@/src/actions/books"
+import { getSession } from "@/src/actions/auth"
 import ProfileMenu from "@/src/components/auth/profile-menu"
 
 export const dynamic = "force-dynamic"
 
 type Book = typeof booksTable.$inferSelect
-type Session = { user: { id: string; email: string; name?: string } } | null
+type Session = { user: { id: string; email: string; name?: string; role?: "user" | "admin" } } | null
 
 const statusColors = {
   to_read: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
@@ -42,12 +43,11 @@ export default function BookDetailPage() {
   useEffect(() => {
     const fetchSession = async () => {
       try {
-        const response = await fetch("/api/auth/get-session")
-        if (!response.ok) {
+        const sessionData = await getSession()
+        if (!sessionData) {
           router.push("/login")
           return
         }
-        const sessionData = await response.json()
         setSession(sessionData)
       } catch (error) {
         console.error("Error fetching session:", error)
@@ -151,7 +151,11 @@ export default function BookDetailPage() {
             <ArrowLeft className="size-4" />
             Back
           </Button>
-          <ProfileMenu name={session?.user?.name ?? ""} email={session?.user?.email ?? ""} />
+          <ProfileMenu
+            name={session?.user?.name ?? ""}
+            email={session?.user?.email ?? ""}
+            isAdmin={session?.user?.role === "admin"}
+          />
         </div>
 
         {/* Main content */}

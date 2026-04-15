@@ -8,6 +8,7 @@ import {
   verificationTokensTable,
 } from "./schema/user"
 import { booksTable } from "./schema/book"
+import { systemSettingsTable } from "./schema/system"
 
 const globalForDb = globalThis as typeof globalThis & {
   pool?: Pool
@@ -29,6 +30,7 @@ export const schema = {
   account: accountsTable,
   verification: verificationTokensTable,
   books: booksTable,
+  systemSettings: systemSettingsTable,
 } as const
 
 export const db = drizzle(pool, { schema })
