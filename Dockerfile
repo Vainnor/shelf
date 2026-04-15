@@ -19,6 +19,11 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 CMD ["pnpm", "dev"]
 
+FROM deps AS migrator
+ENV NODE_ENV=development
+COPY . .
+CMD ["pnpm", "drizzle-kit", "push"]
+
 FROM base AS builder
 ARG APP_VERSION
 ARG GIT_SHA

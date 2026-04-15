@@ -1,7 +1,8 @@
 import { ArrowRight, BookOpen, CheckCircle2, PencilLine } from "lucide-react"
+import Link from "next/link"
 
 import { Badge } from "@/src/components/ui/badge"
-import { Button } from "@/src/components/ui/button"
+import { buttonVariants } from "@/src/components/ui/button"
 import {
   Card,
   CardContent,
@@ -10,6 +11,7 @@ import {
   CardTitle,
 } from "@/src/components/ui/card"
 import { Separator } from "@/src/components/ui/separator"
+import { cn } from "@/src/lib/utils"
 
 const shelves = [
   {
@@ -54,14 +56,20 @@ export default function Page() {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <Button className="gap-2">
+            <Link
+              href="/login"
+              className={cn(buttonVariants({ variant: "default", size: "default" }), "gap-2")}
+            >
               Get started
               <ArrowRight className="size-4" />
-            </Button>
-            <Button variant="outline" className="gap-2">
+            </Link>
+            <Link
+              href="/signup"
+              className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}
+            >
               Add your first book
               <PencilLine className="size-4" />
-            </Button>
+            </Link>
           </div>
         </div>
 

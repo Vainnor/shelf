@@ -5,6 +5,8 @@ Shelf is a book-tracking app MVP built with Next.js, Better Auth, Drizzle, and s
 ## MVP scope
 
 - Email/password authentication with Better Auth
+- Social sign-in with major OAuth providers when credentials are configured
+- Custom OAuth provider support for self-hosted deployments
 - Three book shelves:
   - To read
   - Currently reading
@@ -36,8 +38,45 @@ Copy `.env.example` to `.env.local` and set:
 ```bash
 BETTER_AUTH_SECRET=
 BETTER_AUTH_URL=http://localhost:3000
+NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3000
 DATABASE_URL=
 ```
+
+### Optional OAuth providers
+
+Set both `*_CLIENT_ID` and `*_CLIENT_SECRET` for each provider you want enabled.
+
+Built-in providers wired by default:
+
+- Google
+- GitHub
+- Microsoft
+- Discord
+- GitLab
+- LinkedIn
+- Apple
+- Facebook
+- X/Twitter
+- Reddit
+- Spotify
+- Twitch
+- Slack
+- Notion
+- TikTok
+
+### Custom OAuth for self-hosted
+
+Use `CUSTOM_OAUTH_PROVIDERS_JSON` with an array of Better Auth `GenericOAuthConfig`
+objects (you can include an optional `label` field for UI display).
+
+```bash
+CUSTOM_OAUTH_PROVIDERS_JSON='[{"providerId":"my-idp","label":"My IDP","discoveryUrl":"https://id.example.com/.well-known/openid-configuration","clientId":"...","clientSecret":"...","scopes":["openid","profile","email"]}]'
+```
+
+Auth routes and pages:
+
+- `/login`
+- `/signup`
 
 ## Development
 
@@ -50,6 +89,7 @@ pnpm dev
 ### Local development
 
 Uses the app container, Postgres, and Caddy on port `8080`.
+Migrations run automatically before the app starts.
 
 ```bash
 docker compose -f compose.dev.yml up --build
@@ -58,6 +98,7 @@ docker compose -f compose.dev.yml up --build
 ### Production-style local run
 
 Uses the production image target with Caddy on port `80`.
+Migrations run automatically before the app starts.
 
 ```bash
 docker compose -f compose.prod.yml up --build

@@ -6,6 +6,8 @@ services:
       POSTGRES_DB: shelf
       POSTGRES_USER: shelf
       POSTGRES_PASSWORD: shelf
+    ports:
+        - "5432:5432"
     volumes:
       - shelf-dev-postgres:/var/lib/postgresql/data
     healthcheck:
@@ -13,6 +15,18 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  migrate:
+    build:
+      context: .
+      target: migrator
+    restart: "no"
+    environment:
+      DATABASE_URL: postgres://shelf:shelf@db:5432/shelf
+    depends_on:
+      db:
+        condition: service_healthy
+    command: pnpm drizzle-kit push
 
   app:
     build:
@@ -30,8 +44,8 @@ services:
       - .:/app
       - shelf-dev-node-modules:/app/node_modules
     depends_on:
-      db:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     expose:
       - "3000"
 
