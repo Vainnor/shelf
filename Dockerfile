@@ -53,6 +53,7 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=builder /app/scripts/run-migrations.mjs ./scripts/run-migrations.mjs
+COPY --from=builder /app/src/db/schema ./src/db/schema
 LABEL org.opencontainers.image.title="Shelf" \
   org.opencontainers.image.version="${APP_VERSION}.${GIT_SHA}" \
   org.opencontainers.image.revision="${GIT_SHA}"
