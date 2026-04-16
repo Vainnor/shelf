@@ -35,7 +35,7 @@ function formatBadgeList(stats: {
   if (stats.favoriteCount >= 5) badges.push("Curator")
 
   if (badges.length === 0) {
-    badges.push("Getting started")
+    badges.push("New reader")
   }
 
   return badges
