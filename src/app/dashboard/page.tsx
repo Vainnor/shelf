@@ -1,6 +1,6 @@
 "use client"
 
-import { BookOpen, Plus, UserRound, X } from "lucide-react"
+import { BookOpen, Plus, X } from "lucide-react"
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -18,6 +18,8 @@ import {
   editBook,
   changeBookStatus,
   removeBook,
+  getBestBooksThisYear,
+  getWeeklyInsights,
 } from "@/src/actions/books"
 import { getSession } from "@/src/actions/auth"
 
@@ -25,8 +27,16 @@ export const dynamic = "force-dynamic"
 
 type Book = typeof booksTable.$inferSelect
 type Session = {
-  user: { id: string; email: string; name?: string; image?: string | null; role?: "user" | "admin" }
+  user: {
+    id: string
+    email: string
+    name?: string
+    image?: string | null
+    role?: "user" | "admin"
+    username?: string | null
+  }
 } | null
+type WeeklyInsights = Awaited<ReturnType<typeof getWeeklyInsights>> | null
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -38,7 +48,16 @@ export default function DashboardPage() {
   const [showForm, setShowForm] = useState(false)
   const [sortBy, setSortBy] = useState<"updated" | "title" | "author">("updated")
   const [filterStatus, setFilterStatus] = useState<BookStatus | "all">("all")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [minPages, setMinPages] = useState("")
+  const [maxPages, setMaxPages] = useState("")
+  const [minRating, setMinRating] = useState("")
+  const [favoriteOnly, setFavoriteOnly] = useState(false)
+  const [createdFrom, setCreatedFrom] = useState("")
+  const [createdTo, setCreatedTo] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [weeklyInsights, setWeeklyInsights] = useState<WeeklyInsights>(null)
+  const [bestBooks, setBestBooks] = useState<Book[]>([])
 
   const displayName = session?.user?.name ?? session?.user?.email ?? "Guest"
 
@@ -66,7 +85,18 @@ export default function DashboardPage() {
     setLoading(true)
     setError(null)
     try {
-      const data = await getBooks(filterStatus !== "all" ? filterStatus : undefined)
+      const filters = {
+        status: filterStatus !== "all" ? filterStatus : undefined,
+        search: searchQuery.trim() || undefined,
+        minPages: minPages ? Number(minPages) : undefined,
+        maxPages: maxPages ? Number(maxPages) : undefined,
+        minRating: minRating ? Number(minRating) : undefined,
+        isFavorite: favoriteOnly ? true : undefined,
+        createdFrom: createdFrom ? new Date(`${createdFrom}T00:00:00`) : undefined,
+        createdTo: createdTo ? new Date(`${createdTo}T23:59:59`) : undefined,
+      }
+
+      const data = await getBooks(filters)
       setBooks(data)
     } catch (error) {
       console.error("Error fetching books:", error)
@@ -74,13 +104,24 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
     }
-  }, [filterStatus])
+  }, [filterStatus, searchQuery, minPages, maxPages, minRating, favoriteOnly, createdFrom, createdTo])
+
+  const fetchDashboardInsights = useCallback(async () => {
+    try {
+      const [insights, topBooks] = await Promise.all([getWeeklyInsights(), getBestBooksThisYear(5)])
+      setWeeklyInsights(insights)
+      setBestBooks(topBooks)
+    } catch (error) {
+      console.error("Error fetching dashboard insights:", error)
+    }
+  }, [])
 
   useEffect(() => {
     if (session?.user?.id) {
       fetchBooks()
+      fetchDashboardInsights()
     }
-  }, [session, fetchBooks])
+  }, [session, fetchBooks, fetchDashboardInsights])
 
   const handleAddBook = async (data: BookInput) => {
     setSubmitting(true)
@@ -142,6 +183,18 @@ export default function DashboardPage() {
     }
   }
 
+  const handleEditBook = (book: Book) => {
+    window.scrollTo({ top: 0, behavior: "smooth" })
+    setSelectedBook(book)
+    setShowForm(true)
+  }
+
+  const handleAddBookClick = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" })
+    setSelectedBook(undefined)
+    setShowForm(true)
+  }
+
   const sortBooks = (booksToSort: Book[]) => {
     const sorted = [...booksToSort]
     switch (sortBy) {
@@ -179,10 +232,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button onClick={() => {
-              setSelectedBook(undefined)
-              setShowForm(!showForm)
-            }} className="gap-2">
+            <Button onClick={handleAddBookClick} className="gap-2">
               <Plus className="size-4" />
               Add book
             </Button>
@@ -195,6 +245,7 @@ export default function DashboardPage() {
               email={session?.user?.email ?? ""}
               image={session?.user?.image}
               isAdmin={session?.user?.role === "admin"}
+              username={session?.user?.username}
             />
           </div>
         </div>
@@ -249,10 +300,105 @@ export default function DashboardPage() {
               <option value="reading">Filter: Reading</option>
               <option value="read">Filter: Finished</option>
             </select>
+            <input
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search title, author, ISBN"
+              className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+            />
           </div>
           <p className="text-sm text-muted-foreground">
             {books.length} book{books.length !== 1 ? "s" : ""}
           </p>
+        </div>
+
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+
+        <div className="grid gap-2 rounded-lg border border-border/70 bg-muted/20 p-3 md:grid-cols-2 lg:grid-cols-6">
+          <input
+            type="number"
+            min={0}
+            value={minPages}
+            onChange={(event) => setMinPages(event.target.value)}
+            placeholder="Min pages"
+            className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+          />
+          <input
+            type="number"
+            min={0}
+            value={maxPages}
+            onChange={(event) => setMaxPages(event.target.value)}
+            placeholder="Max pages"
+            className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+          />
+          <input
+            type="number"
+            min={1}
+            max={5}
+            value={minRating}
+            onChange={(event) => setMinRating(event.target.value)}
+            placeholder="Min rating"
+            className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+          />
+          <input
+            type="date"
+            value={createdFrom}
+            onChange={(event) => setCreatedFrom(event.target.value)}
+            className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+          />
+          <input
+            type="date"
+            value={createdTo}
+            onChange={(event) => setCreatedTo(event.target.value)}
+            className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+          />
+          <label className="inline-flex h-9 items-center gap-2 rounded-md border border-input bg-background px-3 py-1 text-sm">
+            <input
+              type="checkbox"
+              checked={favoriteOnly}
+              onChange={(event) => setFavoriteOnly(event.target.checked)}
+              className="size-4"
+            />
+            Favorites only
+          </label>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Weekly insights</CardTitle>
+              <CardDescription>Your reading momentum over the last 7 days.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-2 sm:grid-cols-2">
+              <p className="text-sm"><span className="font-medium">Sessions:</span> {weeklyInsights?.sessionsCount ?? 0}</p>
+              <p className="text-sm"><span className="font-medium">Pages read:</span> {weeklyInsights?.pagesRead ?? 0}</p>
+              <p className="text-sm"><span className="font-medium">Minutes read:</span> {weeklyInsights?.minutesRead ?? 0}</p>
+              <p className="text-sm"><span className="font-medium">Current streak:</span> {weeklyInsights?.currentStreak ?? 0} day(s)</p>
+              <p className="text-sm"><span className="font-medium">Active days:</span> {weeklyInsights?.activeDays ?? 0}</p>
+              <p className="text-sm"><span className="font-medium">Daily goal:</span> {weeklyInsights?.dailyPageGoal ?? 0} pages</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Best books this year</CardTitle>
+              <CardDescription>Top completed books ranked by rating.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {bestBooks.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No completed rated books yet.</p>
+              ) : (
+                bestBooks.map((book) => (
+                  <div key={book.id} className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2 text-sm">
+                    <button className="text-left hover:underline" onClick={() => router.push(`/books/${book.id}`)}>
+                      {book.title}
+                    </button>
+                    <span className="font-medium">{book.rating ?? "-"}/5</span>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {loading ? (
@@ -284,10 +430,7 @@ export default function DashboardPage() {
                         key={book.id}
                         book={book}
                         onView={(b) => router.push(`/books/${b.id}`)}
-                        onEdit={(b) => {
-                          setSelectedBook(b)
-                          setShowForm(true)
-                        }}
+                        onEdit={handleEditBook}
                         onDelete={handleDeleteBook}
                         onStatusChange={handleStatusChange}
                       />

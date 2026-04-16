@@ -1,4 +1,4 @@
-import { ArrowLeft, BookOpen, CheckCircle2, Mail, UserRound } from "lucide-react"
+import { ArrowLeft, CheckCircle2, Mail, UserRound } from "lucide-react"
 import Link from "next/link"
 
 import AvatarSettings from "@/src/components/profile/avatar-settings"
@@ -59,6 +59,16 @@ export default async function ProfilePage() {
             </p>
             <p>
               <span className="font-medium">Role:</span> {user.role}
+            </p>
+            <p>
+              <span className="font-medium">Public profile:</span>{" "}
+              {user.publicProfileEnabled && user.username ? (
+                <Link href={`/u/${user.username}`} className="underline underline-offset-4">
+                  Enabled (@{user.username})
+                </Link>
+              ) : (
+                "Disabled"
+              )}
             </p>
             <p>
               <span className="font-medium">Email verified:</span> {user.emailVerified ? "Yes" : "No"}

@@ -17,7 +17,14 @@ export const dynamic = "force-dynamic"
 
 type Book = typeof booksTable.$inferSelect
 type Session = {
-  user: { id: string; email: string; name?: string; image?: string | null; role?: "user" | "admin" }
+  user: {
+    id: string
+    email: string
+    name?: string
+    image?: string | null
+    role?: "user" | "admin"
+    username?: string | null
+  }
 } | null
 
 const statusColors = {
@@ -38,6 +45,13 @@ export default function LibraryPage() {
   const [books, setBooks] = useState<Book[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedStatus, setSelectedStatus] = useState<"all" | "to_read" | "reading" | "read">("all")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [minPages, setMinPages] = useState("")
+  const [maxPages, setMaxPages] = useState("")
+  const [minRating, setMinRating] = useState("")
+  const [favoriteOnly, setFavoriteOnly] = useState(false)
+  const [createdFrom, setCreatedFrom] = useState("")
+  const [createdTo, setCreatedTo] = useState("")
 
   // Fetch session
   useEffect(() => {
@@ -62,7 +76,16 @@ export default function LibraryPage() {
   const fetchBooks = async () => {
     setLoading(true)
     try {
-      const data = await getBooks(selectedStatus !== "all" ? selectedStatus : undefined)
+      const data = await getBooks({
+        status: selectedStatus !== "all" ? selectedStatus : undefined,
+        search: searchQuery.trim() || undefined,
+        minPages: minPages ? Number(minPages) : undefined,
+        maxPages: maxPages ? Number(maxPages) : undefined,
+        minRating: minRating ? Number(minRating) : undefined,
+        isFavorite: favoriteOnly ? true : undefined,
+        createdFrom: createdFrom ? new Date(`${createdFrom}T00:00:00`) : undefined,
+        createdTo: createdTo ? new Date(`${createdTo}T23:59:59`) : undefined,
+      })
       setBooks(data)
     } catch (error) {
       console.error("Error fetching books:", error)
@@ -75,7 +98,7 @@ export default function LibraryPage() {
     if (session?.user?.id) {
       fetchBooks()
     }
-  }, [session, selectedStatus])
+  }, [session, selectedStatus, searchQuery, minPages, maxPages, minRating, favoriteOnly, createdFrom, createdTo])
 
   const displayName = session?.user?.name ?? session?.user?.email ?? "Guest"
 
@@ -93,7 +116,7 @@ export default function LibraryPage() {
               Library
             </Badge>
             <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              {displayName}'s Bookshelf
+              {displayName}&apos;s Bookshelf
             </h1>
             <p className="text-muted-foreground">
               View all your books displayed as they appear on a shelf.
@@ -111,6 +134,7 @@ export default function LibraryPage() {
               email={session?.user?.email ?? ""}
               image={session?.user?.image}
               isAdmin={session?.user?.role === "admin"}
+              username={session?.user?.username}
             />
           </div>
         </div>
@@ -136,6 +160,61 @@ export default function LibraryPage() {
                     : "Finished"}
             </button>
           ))}
+          <input
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search title, author, ISBN"
+            className="h-9 rounded-lg border border-input bg-background px-3 py-1 text-sm"
+          />
+        </div>
+
+        <div className="grid gap-2 rounded-lg border border-border/70 bg-muted/20 p-3 md:grid-cols-2 lg:grid-cols-6">
+          <input
+            type="number"
+            min={0}
+            value={minPages}
+            onChange={(event) => setMinPages(event.target.value)}
+            placeholder="Min pages"
+            className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+          />
+          <input
+            type="number"
+            min={0}
+            value={maxPages}
+            onChange={(event) => setMaxPages(event.target.value)}
+            placeholder="Max pages"
+            className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+          />
+          <input
+            type="number"
+            min={1}
+            max={5}
+            value={minRating}
+            onChange={(event) => setMinRating(event.target.value)}
+            placeholder="Min rating"
+            className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+          />
+          <input
+            type="date"
+            value={createdFrom}
+            onChange={(event) => setCreatedFrom(event.target.value)}
+            className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+          />
+          <input
+            type="date"
+            value={createdTo}
+            onChange={(event) => setCreatedTo(event.target.value)}
+            className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+          />
+          <label className="inline-flex h-9 items-center gap-2 rounded-md border border-input bg-background px-3 py-1 text-sm">
+            <input
+              type="checkbox"
+              checked={favoriteOnly}
+              onChange={(event) => setFavoriteOnly(event.target.checked)}
+              className="size-4"
+            />
+            Favorites only
+          </label>
         </div>
 
         {loading ? (

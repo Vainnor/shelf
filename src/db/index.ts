@@ -8,6 +8,19 @@ import {
   verificationTokensTable,
 } from "./schema/user"
 import { booksTable } from "./schema/book"
+import {
+  bookClubMembersTable,
+  bookClubsTable,
+  bookProgressEventsTable,
+  bookTagsTable,
+  collectionBooksTable,
+  collectionsTable,
+  followsTable,
+  readingGoalsTable,
+  readingSessionsTable,
+  sharedCollectionMembersTable,
+  tagsTable,
+} from "./schema/reading"
 import { systemSettingsTable } from "./schema/system"
 
 const globalForDb = globalThis as typeof globalThis & {
@@ -30,6 +43,17 @@ export const schema = {
   account: accountsTable,
   verification: verificationTokensTable,
   books: booksTable,
+  tags: tagsTable,
+  bookTags: bookTagsTable,
+  collections: collectionsTable,
+  collectionBooks: collectionBooksTable,
+  follows: followsTable,
+  bookClubs: bookClubsTable,
+  bookClubMembers: bookClubMembersTable,
+  sharedCollectionMembers: sharedCollectionMembersTable,
+  readingGoals: readingGoalsTable,
+  readingSessions: readingSessionsTable,
+  bookProgressEvents: bookProgressEventsTable,
   systemSettings: systemSettingsTable,
 } as const
 

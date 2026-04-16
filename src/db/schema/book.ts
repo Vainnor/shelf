@@ -1,4 +1,4 @@
-import { index, integer, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core"
+import { boolean, index, integer, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core"
 
 import { usersTable } from "./user"
 
@@ -21,6 +21,11 @@ export const booksTable = pgTable(
     isbn: text("isbn"),
     coverUrl: text("cover_url"),
     notes: text("notes"),
+    rating: integer("rating"),
+    review: text("review"),
+    isFavorite: boolean("is_favorite").notNull().default(false),
+    dailyPageGoal: integer("daily_page_goal"),
+    targetFinishDate: timestamp("target_finish_date", { mode: "date" }),
     startedAt: timestamp("started_at", { mode: "date" }),
     finishedAt: timestamp("finished_at", { mode: "date" }),
     createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
@@ -30,6 +35,8 @@ export const booksTable = pgTable(
     userStatusIdx: index("books_user_status_idx").on(table.userId, table.status),
     userCreatedIdx: index("books_user_created_idx").on(table.userId, table.createdAt),
     isbnIdx: index("books_isbn_idx").on(table.isbn),
+    favoriteIdx: index("books_favorite_idx").on(table.userId, table.isFavorite),
+    ratingIdx: index("books_rating_idx").on(table.userId, table.rating),
   })
 )
 

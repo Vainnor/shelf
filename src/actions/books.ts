@@ -7,9 +7,20 @@ import {
   updateBook,
   updateBookStatus,
   deleteBook,
+  type BookQueryFilters,
   type BookStatus,
   type BookInput,
 } from "@/src/lib/books"
+import { db } from "@/src/db"
+import { booksTable } from "@/src/db/schema/book"
+import { and, eq, gte } from "drizzle-orm"
+import {
+  createProgressEvent,
+  getBookProgressTimeline,
+  getWeeklyReadingInsights,
+  logReadingSession,
+  setDailyPageGoal,
+} from "@/src/lib/reading"
 
 async function requireActiveSession() {
   const activeSession = await getActiveSession()
@@ -20,16 +31,25 @@ async function requireActiveSession() {
   return activeSession.session
 }
 
-export async function getBooks(status?: BookStatus) {
+export async function getBooks(filters?: BookStatus | BookQueryFilters) {
   const session = await requireActiveSession()
+  const normalizedFilters: BookQueryFilters | undefined =
+    typeof filters === "string" ? { status: filters } : filters
 
   try {
-    const books = await listBooksForUser(session.user.id, status)
+    const books = await listBooksForUser(session.user.id, normalizedFilters)
     return books
   } catch (error) {
     console.error("Error fetching books:", error)
     throw new Error("Failed to fetch books")
   }
+}
+
+export type LogReadingSessionInput = {
+  bookId: string
+  durationMinutes: number
+  pagesRead: number
+  notes?: string | null
 }
 
 export type IsbnLookupResult = {
@@ -147,7 +167,45 @@ export async function editBook(bookId: string, input: Partial<BookInput>) {
   const session = await requireActiveSession()
 
   try {
+    const existingBook = await getBookByIdForUser(session.user.id, bookId)
     const book = await updateBook(session.user.id, bookId, input)
+
+    if (book && existingBook) {
+      if (input.currentPage !== undefined && input.currentPage !== existingBook.currentPage) {
+        await createProgressEvent({
+          userId: session.user.id,
+          bookId,
+          eventType: "page_update",
+          fromPage: existingBook.currentPage,
+          toPage: book.currentPage,
+          fromStatus: existingBook.status,
+          toStatus: book.status,
+        })
+      }
+
+      if (input.rating !== undefined && input.rating !== existingBook.rating) {
+        await createProgressEvent({
+          userId: session.user.id,
+          bookId,
+          eventType: "rating_updated",
+          rating: book.rating,
+          fromStatus: existingBook.status,
+          toStatus: book.status,
+        })
+      }
+
+      if (input.review !== undefined && input.review !== existingBook.review) {
+        await createProgressEvent({
+          userId: session.user.id,
+          bookId,
+          eventType: "review_updated",
+          review: book.review,
+          fromStatus: existingBook.status,
+          toStatus: book.status,
+        })
+      }
+    }
+
     return book
   } catch (error) {
     console.error("Error updating book:", error)
@@ -159,7 +217,19 @@ export async function changeBookStatus(bookId: string, status: BookStatus) {
   const session = await requireActiveSession()
 
   try {
+    const existingBook = await getBookByIdForUser(session.user.id, bookId)
     const book = await updateBookStatus(session.user.id, bookId, status)
+    if (book && existingBook && existingBook.status !== book.status) {
+      await createProgressEvent({
+        userId: session.user.id,
+        bookId,
+        eventType: "status_change",
+        fromPage: existingBook.currentPage,
+        toPage: book.currentPage,
+        fromStatus: existingBook.status,
+        toStatus: book.status,
+      })
+    }
     return book
   } catch (error) {
     console.error("Error updating book status:", error)
@@ -177,5 +247,70 @@ export async function removeBook(bookId: string) {
     console.error("Error deleting book:", error)
     throw new Error("Failed to delete book")
   }
+}
+
+export async function logBookReadingSession(input: LogReadingSessionInput) {
+  const session = await requireActiveSession()
+
+  try {
+    return await logReadingSession(session.user.id, input)
+  } catch (error) {
+    console.error("Error logging reading session:", error)
+    throw new Error("Failed to log reading session")
+  }
+}
+
+export async function getBookTimeline(bookId: string, limit = 50) {
+  const session = await requireActiveSession()
+
+  try {
+    return await getBookProgressTimeline(session.user.id, bookId, limit)
+  } catch (error) {
+    console.error("Error loading book timeline:", error)
+    throw new Error("Failed to load progress timeline")
+  }
+}
+
+export async function getWeeklyInsights() {
+  const session = await requireActiveSession()
+
+  try {
+    return await getWeeklyReadingInsights(session.user.id)
+  } catch (error) {
+    console.error("Error loading weekly insights:", error)
+    throw new Error("Failed to load weekly insights")
+  }
+}
+
+export async function updateDailyGoal(pagesPerDay: number) {
+  const session = await requireActiveSession()
+
+  try {
+    return await setDailyPageGoal(session.user.id, pagesPerDay)
+  } catch (error) {
+    console.error("Error updating daily goal:", error)
+    throw new Error("Failed to update daily goal")
+  }
+}
+
+export async function getBestBooksThisYear(limit = 5) {
+  const session = await requireActiveSession()
+  const yearStart = new Date(new Date().getFullYear(), 0, 1)
+
+  return db.query.books.findMany({
+    where: and(
+      eq(booksTable.userId, session.user.id),
+      eq(booksTable.status, "read"),
+      gte(booksTable.finishedAt, yearStart)
+    ),
+    orderBy: (table, { desc }) => [desc(table.rating), desc(table.finishedAt), desc(table.updatedAt)],
+    limit,
+  })
+}
+
+async function getBookByIdForUser(userId: string, bookId: string) {
+  return db.query.books.findFirst({
+    where: and(eq(booksTable.id, bookId), eq(booksTable.userId, userId)),
+  })
 }
 

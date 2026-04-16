@@ -16,6 +16,8 @@ export async function getSession() {
       user: {
         ...activeSession.session.user,
         role: activeSession.user.role,
+        username: activeSession.user.username,
+        publicProfileEnabled: activeSession.user.publicProfileEnabled,
       },
     }
   } catch (error) {

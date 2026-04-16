@@ -1,7 +1,7 @@
 "use client"
 
 import { Download, KeyRound, TriangleAlert, Trash2 } from "lucide-react"
-import { useActionState, useEffect, useMemo, useState } from "react"
+import { type FormEvent, useActionState, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import {
@@ -10,6 +10,7 @@ import {
   sendCurrentUserPasswordReset,
   updateCurrentUserSettings,
 } from "@/src/actions/settings"
+import { updatePublicProfileSettings } from "@/src/actions/social"
 import type { SettingsActionState } from "@/src/actions/settings"
 import { authClient } from "@/src/lib/auth-client"
 import { Button } from "@/src/components/ui/button"
@@ -19,6 +20,8 @@ import { Input } from "@/src/components/ui/input"
 type SettingsPanelProps = {
   initialName: string
   initialEmail: string
+  initialUsername: string
+  initialPublicProfileEnabled: boolean
   userId: string
   role: "user" | "admin"
 }
@@ -28,7 +31,14 @@ const initialSettingsActionState: SettingsActionState = {
   message: "",
 }
 
-export default function SettingsPanel({ initialName, initialEmail, userId, role }: SettingsPanelProps) {
+export default function SettingsPanel({
+  initialName,
+  initialEmail,
+  initialUsername,
+  initialPublicProfileEnabled,
+  userId,
+  role,
+}: SettingsPanelProps) {
   const [profileState, profileAction, profilePending] = useActionState(
     updateCurrentUserSettings,
     initialSettingsActionState
@@ -48,6 +58,9 @@ export default function SettingsPanel({ initialName, initialEmail, userId, role 
 
   const [name, setName] = useState(initialName)
   const [email, setEmail] = useState(initialEmail)
+  const [username, setUsername] = useState(initialUsername)
+  const [publicProfileEnabled, setPublicProfileEnabled] = useState(initialPublicProfileEnabled)
+  const [socialPending, setSocialPending] = useState(false)
   const [confirmText, setConfirmText] = useState("")
 
   const fileName = useMemo(() => {
@@ -115,6 +128,25 @@ export default function SettingsPanel({ initialName, initialEmail, userId, role 
     }
   }, [deleteState.deleted, deleteState.ok])
 
+  async function handleSocialSettingsSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setSocialPending(true)
+    try {
+      const updated = await updatePublicProfileSettings({
+        username,
+        publicProfileEnabled,
+      })
+
+      setUsername(updated.username ?? "")
+      setPublicProfileEnabled(updated.publicProfileEnabled)
+      toast.success("Public profile settings updated")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update social settings")
+    } finally {
+      setSocialPending(false)
+    }
+  }
+
   return (
     <div className="grid gap-4">
       <Card>
@@ -153,6 +185,48 @@ export default function SettingsPanel({ initialName, initialEmail, userId, role 
                 {profilePending ? "Saving..." : "Save changes"}
               </Button>
             </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Public profile</CardTitle>
+          <CardDescription>
+            Opt in to a shareable profile and choose your public username.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSocialSettingsSubmit} className="space-y-3">
+            <label className="space-y-1 text-sm">
+              <span className="font-medium">Username</span>
+              <Input
+                value={username}
+                onChange={(event) => setUsername(event.target.value.toLowerCase())}
+                placeholder="reader_name"
+                required
+                disabled={socialPending}
+              />
+            </label>
+
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={publicProfileEnabled}
+                onChange={(event) => setPublicProfileEnabled(event.target.checked)}
+                disabled={socialPending}
+                className="size-4"
+              />
+              Enable shareable public profile
+            </label>
+
+            <div className="text-xs text-muted-foreground">
+              Public profile URL: {username ? `/u/${username}` : "Set a username to generate a profile URL."}
+            </div>
+
+            <Button type="submit" disabled={socialPending}>
+              {socialPending ? "Saving..." : "Save public profile settings"}
+            </Button>
           </form>
         </CardContent>
       </Card>

@@ -32,6 +32,8 @@ export default async function SettingsPage() {
         <SettingsPanel
           initialName={user.name ?? ""}
           initialEmail={user.email}
+          initialUsername={user.username ?? ""}
+          initialPublicProfileEnabled={user.publicProfileEnabled}
           userId={user.id}
           role={user.role}
         />

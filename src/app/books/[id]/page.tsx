@@ -3,12 +3,13 @@
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { ArrowLeft, Edit2, Trash2, BookOpen } from "lucide-react"
+import { toast } from "sonner"
 
 import { Badge } from "@/src/components/ui/badge"
 import { Button } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import type { booksTable } from "@/src/db/schema/book"
-import { getBooks, removeBook, changeBookStatus } from "@/src/actions/books"
+import { getBookTimeline, getBooks, logBookReadingSession, removeBook, changeBookStatus } from "@/src/actions/books"
 import { getSession } from "@/src/actions/auth"
 import ProfileMenu from "@/src/components/auth/profile-menu"
 
@@ -16,8 +17,16 @@ export const dynamic = "force-dynamic"
 
 type Book = typeof booksTable.$inferSelect
 type Session = {
-  user: { id: string; email: string; name?: string; image?: string | null; role?: "user" | "admin" }
+  user: {
+    id: string
+    email: string
+    name?: string
+    image?: string | null
+    role?: "user" | "admin"
+    username?: string | null
+  }
 } | null
+type ProgressEvent = Awaited<ReturnType<typeof getBookTimeline>>[number]
 
 const statusColors = {
   to_read: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
@@ -40,6 +49,11 @@ export default function BookDetailPage() {
   const [book, setBook] = useState<Book | null>(null)
   const [loading, setLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [timeline, setTimeline] = useState<ProgressEvent[]>([])
+  const [sessionMinutes, setSessionMinutes] = useState("30")
+  const [sessionPages, setSessionPages] = useState("15")
+  const [sessionNotes, setSessionNotes] = useState("")
+  const [isLoggingSession, setIsLoggingSession] = useState(false)
 
   // Fetch session
   useEffect(() => {
@@ -85,6 +99,21 @@ export default function BookDetailPage() {
     fetchBook()
   }, [session?.user?.id, bookId, router])
 
+  useEffect(() => {
+    const fetchTimeline = async () => {
+      if (!session?.user?.id) return
+
+      try {
+        const items = await getBookTimeline(bookId, 30)
+        setTimeline(items)
+      } catch (error) {
+        console.error("Error fetching timeline:", error)
+      }
+    }
+
+    fetchTimeline()
+  }, [session?.user?.id, bookId])
+
   const handleDelete = async () => {
     if (!book || !confirm("Are you sure you want to delete this book?")) return
 
@@ -106,9 +135,67 @@ export default function BookDetailPage() {
       await changeBookStatus(book.id, newStatus)
       // Update local state
       setBook({ ...book, status: newStatus })
+      const items = await getBookTimeline(book.id, 30)
+      setTimeline(items)
+      toast.success("Book status updated")
     } catch (error) {
       console.error("Error updating status:", error)
-      alert("Failed to update status")
+      toast.error("Failed to update status")
+    }
+  }
+
+  const handleLogReadingSession = async () => {
+    if (!book) return
+
+    const durationMinutes = Number(sessionMinutes)
+    const pagesRead = Number(sessionPages)
+
+    if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+      toast.error("Session minutes must be greater than zero")
+      return
+    }
+
+    if (!Number.isFinite(pagesRead) || pagesRead < 0) {
+      toast.error("Pages read cannot be negative")
+      return
+    }
+
+    setIsLoggingSession(true)
+    try {
+      const result = await logBookReadingSession({
+        bookId: book.id,
+        durationMinutes,
+        pagesRead,
+        notes: sessionNotes.trim() || null,
+      })
+
+      setBook(result.book)
+      setSessionNotes("")
+      const items = await getBookTimeline(book.id, 30)
+      setTimeline(items)
+      toast.success("Reading session logged")
+    } catch (error) {
+      console.error("Error logging reading session:", error)
+      toast.error("Failed to log reading session")
+    } finally {
+      setIsLoggingSession(false)
+    }
+  }
+
+  function formatEventLabel(event: ProgressEvent) {
+    switch (event.eventType) {
+      case "session_logged":
+        return `Session logged${event.fromPage !== null && event.toPage !== null ? ` (${event.fromPage} -> ${event.toPage})` : ""}`
+      case "page_update":
+        return `Page update (${event.fromPage ?? "-"} -> ${event.toPage ?? "-"})`
+      case "status_change":
+        return `Status changed (${event.fromStatus ?? "-"} -> ${event.toStatus ?? "-"})`
+      case "rating_updated":
+        return `Rating updated (${event.rating ?? "-"}/5)`
+      case "review_updated":
+        return "Review updated"
+      default:
+        return event.eventType
     }
   }
 
@@ -158,6 +245,7 @@ export default function BookDetailPage() {
             email={session?.user?.email ?? ""}
             image={session?.user?.image}
             isAdmin={session?.user?.role === "admin"}
+            username={session?.user?.username}
           />
         </div>
 
@@ -233,6 +321,43 @@ export default function BookDetailPage() {
               </Card>
             )}
 
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Log reading session</CardTitle>
+                <CardDescription>Track time spent reading and pages completed.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    type="number"
+                    min={1}
+                    value={sessionMinutes}
+                    onChange={(event) => setSessionMinutes(event.target.value)}
+                    placeholder="Minutes"
+                    className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    value={sessionPages}
+                    onChange={(event) => setSessionPages(event.target.value)}
+                    placeholder="Pages read"
+                    className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                  />
+                </div>
+                <textarea
+                  value={sessionNotes}
+                  onChange={(event) => setSessionNotes(event.target.value)}
+                  placeholder="Optional session notes"
+                  rows={2}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+                <Button onClick={handleLogReadingSession} disabled={isLoggingSession}>
+                  {isLoggingSession ? "Logging..." : "Log session"}
+                </Button>
+              </CardContent>
+            </Card>
+
             {/* Dates */}
             <Card>
               <CardHeader>
@@ -292,6 +417,26 @@ export default function BookDetailPage() {
             </CardContent>
           </Card>
         )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Progress timeline</CardTitle>
+            <CardDescription>Recent progress events for this book.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {timeline.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No timeline events yet.</p>
+            ) : (
+              timeline.map((event) => (
+                <div key={event.id} className="rounded-md border border-border/70 px-3 py-2 text-sm">
+                  <p className="font-medium">{formatEventLabel(event)}</p>
+                  <p className="text-xs text-muted-foreground">{new Date(event.createdAt).toLocaleString()}</p>
+                  {event.details ? <p className="mt-1 text-xs text-muted-foreground">{event.details}</p> : null}
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
       </section>
     </main>
   )
