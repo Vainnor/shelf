@@ -295,7 +295,7 @@ export default function SettingsPanel({
               />
             </label>
 
-            <label className="inline-flex items-center gap-2 text-sm">
+            <label className="mt-2 inline-flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
                 checked={publicProfileEnabled}

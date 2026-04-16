@@ -15,27 +15,76 @@ export const metadata: Metadata = {
 const sections = [
   {
     title: "Data we collect",
-    body: "Shelf stores account details (name, email, auth metadata) and reading data you add such as books, progress notes, and preferences.",
+    points: [
+      "Account details such as your name, email address, profile picture, username, and authentication metadata.",
+      "Reading data you add, including books, ISBNs, shelves/status, page counts, notes, reviews, ratings, tags, collections, and progress history.",
+      "Social and community activity such as follows, public profile settings, club membership, club posts, and club moderation actions.",
+      "Preference data such as reminder settings, notification choices, and visibility settings you choose for your profile.",
+      "Operational records such as sessions, audit logs, and basic request metadata needed to keep the app secure and functional.",
+    ],
   },
   {
     title: "How we use data",
-    body: "We use your data to provide core features like authentication, dashboard analytics, reminders, recommendations, and account security flows.",
+    points: [
+      "To create and secure accounts, authenticate sessions, and keep your account accessible across devices.",
+      "To power book tracking features, progress dashboards, reminders, recommendations, reading insights, and export/delete tools.",
+      "To support optional social features like public profiles, followers, clubs, shared shelves, and club activity feeds.",
+      "To operate admin features, detect abuse, and record meaningful moderation or configuration changes in audit logs.",
+      "To send transactional email such as password resets, reminders, and important account notifications.",
+    ],
   },
   {
-    title: "Sharing and disclosure",
-    body: "Shelf does not sell your personal data. Data may be processed by infrastructure and email providers required to run authentication and operational notifications.",
+    title: "How your data may be shared",
+    points: [
+      "Shelf does not sell your personal data.",
+      "Data may be processed by infrastructure providers that host the app, database, file storage, authentication, or email services used by your deployment.",
+      "If you enable social features, some profile and reading information may be visible to other users according to your visibility settings.",
+      "Self-hosted deployments control their own third-party services, so the exact processors can vary by installation.",
+    ],
   },
   {
-    title: "Data retention and deletion",
-    body: "You can export your data from settings and request account deletion. Deletion removes your account and associated records from this deployment.",
+    title: "Cookies and sessions",
+    points: [
+      "We use authentication sessions and related cookies or tokens to keep you signed in and to protect your account.",
+      "Session data may be used to recognize your browser, maintain login state, and enforce access controls.",
+    ],
+  },
+  {
+    title: "Retention and deletion",
+    points: [
+      "We keep data for as long as your account exists or as needed to operate the service, comply with legal obligations, or resolve abuse and security issues.",
+      "You can export your account data from settings in a JSON format.",
+      "You can request account deletion from settings; when deleted, your personal account data is removed from that deployment, subject to backup and legal retention requirements.",
+    ],
   },
   {
     title: "Security",
-    body: "We use authenticated sessions, role-based access controls, and audit logs for critical administrative operations.",
+    points: [
+      "We use authenticated sessions, role-based access controls, and admin-level safeguards for sensitive actions.",
+      "Important administrative and social changes may be recorded in audit logs so operators can review abuse, moderation, or configuration events.",
+      "No system is perfectly secure, but we try to keep access limited to the smallest practical set of accounts and services.",
+    ],
+  },
+  {
+    title: "Your choices",
+    points: [
+      "You can update your profile, reading data, reminder preferences, and visibility settings through the app.",
+      "You can disable public profile features and control whether your reading activity is shared through social features.",
+      "You can delete your account or request an export if you no longer want to use the service.",
+    ],
+  },
+  {
+    title: "Children",
+    points: [
+      "Shelf is not intended for children under the age required by the laws that apply to your deployment.",
+    ],
   },
   {
     title: "Contact",
-    body: "For questions about this policy, contact your Shelf deployment administrator.",
+    points: [
+      "For questions about this policy, contact the administrator of the Shelf deployment you use.",
+      "If you are the operator of a self-hosted instance, you should customize this policy to match your legal obligations and actual data processing setup.",
+    ],
   },
 ]
 
@@ -63,14 +112,22 @@ export default function PrivacyPolicyPage() {
           <CardHeader>
             <CardTitle>How Shelf handles your data</CardTitle>
             <CardDescription>
-              This policy is a baseline template. Customize for your deployment and legal requirements.
+              This policy explains how Shelf handles account, reading, and social data in a self-hosted or managed
+              deployment.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             {sections.map((section) => (
-              <div key={section.title} className="space-y-1">
+              <div key={section.title} className="space-y-2">
                 <h2 className="text-base font-medium">{section.title}</h2>
-                <p className="text-sm leading-6 text-muted-foreground">{section.body}</p>
+                <ul className="space-y-2 text-sm leading-6 text-muted-foreground">
+                  {section.points.map((point) => (
+                    <li key={point} className="flex gap-2">
+                      <span className="mt-2 size-1.5 shrink-0 rounded-full bg-muted-foreground/60" />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             ))}
           </CardContent>

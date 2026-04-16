@@ -19,10 +19,14 @@ import { usersTable } from "@/src/db/schema/user"
 import { and, eq, gte } from "drizzle-orm"
 import {
   createProgressEvent,
+  getBookHighlights,
   getBookProgressTimeline,
   getWeeklyReadingInsights,
   logReadingSession,
   setDailyPageGoal,
+  createBookHighlight,
+  updateBookHighlight,
+  deleteBookHighlight,
 } from "@/src/lib/reading"
 
 async function requireActiveSession() {
@@ -342,9 +346,88 @@ export async function getBookRecommendations(limit = 8) {
   return listRecommendationsForUser(session.user.id, limit)
 }
 
+export type BookHighlightActionInput = {
+  bookId: string
+  quote: string
+  page?: number | null
+  highlightedAt?: string | null
+}
+
+export type UpdateBookHighlightActionInput = {
+  highlightId: string
+  quote: string
+  page?: number | null
+  highlightedAt?: string | null
+}
+
+function parseOptionalDate(value?: string | null) {
+  if (!value) {
+    return null
+  }
+
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error("Invalid date")
+  }
+
+  return parsed
+}
+
+export async function getBookHighlightsForBook(bookId: string, limit = 100) {
+  const session = await requireActiveSession()
+
+  try {
+    return await getBookHighlights(session.user.id, bookId, limit)
+  } catch (error) {
+    console.error("Error loading book highlights:", error)
+    throw new Error("Failed to load highlights")
+  }
+}
+
+export async function addBookHighlightForBook(input: BookHighlightActionInput) {
+  const session = await requireActiveSession()
+
+  try {
+    return await createBookHighlight(session.user.id, {
+      bookId: input.bookId,
+      quote: input.quote,
+      page: input.page ?? null,
+      highlightedAt: parseOptionalDate(input.highlightedAt),
+    })
+  } catch (error) {
+    console.error("Error creating highlight:", error)
+    throw error instanceof Error ? error : new Error("Failed to create highlight")
+  }
+}
+
+export async function editBookHighlightForBook(input: UpdateBookHighlightActionInput) {
+  const session = await requireActiveSession()
+
+  try {
+    return await updateBookHighlight(session.user.id, input.highlightId, {
+      quote: input.quote,
+      page: input.page ?? null,
+      highlightedAt: parseOptionalDate(input.highlightedAt),
+    })
+  } catch (error) {
+    console.error("Error updating highlight:", error)
+    throw error instanceof Error ? error : new Error("Failed to update highlight")
+  }
+}
+
+export async function removeBookHighlightForBook(highlightId: string) {
+  const session = await requireActiveSession()
+
+  try {
+    return await deleteBookHighlight(session.user.id, highlightId)
+  } catch (error) {
+    console.error("Error deleting highlight:", error)
+    throw error instanceof Error ? error : new Error("Failed to delete highlight")
+  }
+}
+
 async function getBookByIdForUser(userId: string, bookId: string) {
   return db.query.books.findFirst({
     where: and(eq(booksTable.id, bookId), eq(booksTable.userId, userId)),
   })
 }
-

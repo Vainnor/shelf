@@ -43,6 +43,13 @@
       "when": 1776389000000,
       "tag": "0005_reading_reminders",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776402000000,
+      "tag": "0006_book_highlights",
+      "breakpoints": true
     }
   ]
 }
