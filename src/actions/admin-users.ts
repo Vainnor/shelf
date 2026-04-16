@@ -6,8 +6,9 @@ import { revalidatePath } from "next/cache"
 import { db } from "@/src/db"
 import { systemSettingsTable } from "@/src/db/schema/system"
 import { sessionsTable } from "@/src/db/schema/user"
-import { usersTable } from "@/src/db/schema/user"
+import { userRoles, type UserRole, usersTable } from "@/src/db/schema/user"
 import { auth } from "@/src/lib/auth"
+import { writeAuditLog } from "@/src/lib/audit"
 import { getSystemSettings, requireAdminUser } from "@/src/lib/admin"
 
 function requireId(value: FormDataEntryValue | null, field: string) {
@@ -16,6 +17,18 @@ function requireId(value: FormDataEntryValue | null, field: string) {
     throw new Error(`${field} is required`)
   }
   return id
+}
+
+function parseUserRole(value: FormDataEntryValue | null, fallbackRole: UserRole): UserRole {
+  if (value === null) {
+    return fallbackRole
+  }
+
+  const role = String(value ?? "").trim() as UserRole
+  if (!userRoles.includes(role)) {
+    throw new Error("Invalid role")
+  }
+  return role
 }
 
 export async function updateUserByAdmin(formData: FormData) {
@@ -37,13 +50,45 @@ export async function updateUserByAdmin(formData: FormData) {
     throw new Error("Email is already used by another account")
   }
 
+  const targetUser = await db.query.user.findFirst({ where: eq(usersTable.id, userId) })
+  if (!targetUser) {
+    throw new Error("User not found")
+  }
+
+  const role = parseUserRole(formData.get("role"), targetUser.role)
+
+  if (targetUser.role === "admin" && role !== "admin") {
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(usersTable)
+      .where(eq(usersTable.role, "admin"))
+
+    if (count <= 1) {
+      throw new Error("Cannot remove admin role from the last admin account")
+    }
+  }
+
   await db
     .update(usersTable)
-    .set({ name, email, updatedAt: new Date() })
+    .set({ name, email, role, updatedAt: new Date() })
     .where(eq(usersTable.id, userId))
 
+  await writeAuditLog({
+    actorUserId: adminUser.id,
+    scope: "admin",
+    action: "user.updated",
+    targetType: "user",
+    targetId: userId,
+    metadata: {
+      previousRole: targetUser.role,
+      nextRole: role,
+      changedEmail: targetUser.email !== email,
+      changedName: targetUser.name !== name,
+    },
+  })
+
   revalidatePath("/admin")
-  revalidatePath("/admin/users/[id]", "page")
+  revalidatePath(`/admin/users/${userId}`)
 
   if (adminUser.id === userId) {
     revalidatePath("/profile")
@@ -74,6 +119,15 @@ export async function toggleUserDisabledByAdmin(formData: FormData) {
   if (!targetUser.isDisabled) {
     await db.delete(sessionsTable).where(eq(sessionsTable.userId, userId))
   }
+
+  await writeAuditLog({
+    actorUserId: adminUser.id,
+    scope: "admin",
+    action: "user.disabled_toggled",
+    targetType: "user",
+    targetId: userId,
+    metadata: { disabled: !targetUser.isDisabled },
+  })
 
   revalidatePath("/admin")
 }
@@ -106,11 +160,21 @@ export async function deleteUserByAdmin(formData: FormData) {
   }
 
   await db.delete(usersTable).where(eq(usersTable.id, userId))
+
+  await writeAuditLog({
+    actorUserId: adminUser.id,
+    scope: "admin",
+    action: "user.deleted",
+    targetType: "user",
+    targetId: userId,
+    metadata: { role: targetUser.role, email: targetUser.email },
+  })
+
   revalidatePath("/admin")
 }
 
 export async function sendPasswordResetByAdmin(formData: FormData) {
-  await requireAdminUser()
+  const { user: adminUser } = await requireAdminUser()
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase()
   if (!email) {
@@ -124,11 +188,19 @@ export async function sendPasswordResetByAdmin(formData: FormData) {
     },
   })
 
+  await writeAuditLog({
+    actorUserId: adminUser.id,
+    scope: "admin",
+    action: "user.password_reset_requested",
+    targetType: "user_email",
+    targetId: email,
+  })
+
   revalidatePath("/admin")
 }
 
 export async function setSignupsEnabledByAdmin(formData: FormData) {
-  await requireAdminUser()
+  const { user: adminUser } = await requireAdminUser()
   await getSystemSettings()
   const enabled = String(formData.get("enabled") ?? "false") === "true"
 
@@ -136,6 +208,15 @@ export async function setSignupsEnabledByAdmin(formData: FormData) {
     .update(systemSettingsTable)
     .set({ signupsEnabled: enabled, updatedAt: new Date() })
     .where(eq(systemSettingsTable.id, "default"))
+
+  await writeAuditLog({
+    actorUserId: adminUser.id,
+    scope: "admin",
+    action: "system.signups_updated",
+    targetType: "system_settings",
+    targetId: "default",
+    metadata: { signupsEnabled: enabled },
+  })
 
   revalidatePath("/admin")
   revalidatePath("/signup")

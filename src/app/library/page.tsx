@@ -10,6 +10,7 @@ import { Badge } from "@/src/components/ui/badge"
 import { buttonVariants } from "@/src/components/ui/button"
 import { Card, CardContent } from "@/src/components/ui/card"
 import type { booksTable } from "@/src/db/schema/book"
+import type { UserRole } from "@/src/db/schema/user"
 import { getBooks } from "@/src/actions/books"
 import { getSession } from "@/src/actions/auth"
 
@@ -22,7 +23,7 @@ type Session = {
     email: string
     name?: string
     image?: string | null
-    role?: "user" | "admin"
+    role?: UserRole
     username?: string | null
   }
 } | null

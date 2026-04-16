@@ -8,7 +8,10 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core"
 
-export const userRoleEnum = pgEnum("user_role", ["user", "admin"])
+export const userRoles = ["user", "editor", "moderator", "admin"] as const
+export type UserRole = (typeof userRoles)[number]
+
+export const userRoleEnum = pgEnum("user_role", userRoles)
 
 export const usersTable = pgTable("users", {
   id: text("id").primaryKey(),

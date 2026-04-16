@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src
 import { BookCard, BookForm } from "@/src/components/books"
 import type { BookInput, BookStatus } from "@/src/lib/books"
 import type { booksTable } from "@/src/db/schema/book"
+import type { UserRole } from "@/src/db/schema/user"
 import {
   getBooks,
   addBook,
@@ -32,7 +33,7 @@ type Session = {
     email: string
     name?: string
     image?: string | null
-    role?: "user" | "admin"
+    role?: UserRole
     username?: string | null
   }
 } | null
