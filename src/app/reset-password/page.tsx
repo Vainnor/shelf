@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useActionState } from "react"
+import { Suspense, useActionState } from "react"
 import { useSearchParams } from "next/navigation"
 
 import { resetPasswordAction, type PasswordResetActionState } from "@/src/actions/password-reset"
@@ -15,6 +15,14 @@ const initialState: PasswordResetActionState = {
 }
 
 export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<ResetPasswordPageFallback />}>
+      <ResetPasswordPageContent />
+    </Suspense>
+  )
+}
+
+function ResetPasswordPageContent() {
   const searchParams = useSearchParams()
   const token = searchParams.get("token") ?? ""
   const [state, action, pending] = useActionState(resetPasswordAction, initialState)
@@ -66,6 +74,19 @@ export default function ResetPasswordPage() {
             </Link>
           </p>
         </CardContent>
+      </Card>
+    </main>
+  )
+}
+
+function ResetPasswordPageFallback() {
+  return (
+    <main className="flex min-h-svh items-center justify-center p-6">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Reset password</CardTitle>
+          <CardDescription>Loading reset link...</CardDescription>
+        </CardHeader>
       </Card>
     </main>
   )
