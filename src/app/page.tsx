@@ -223,9 +223,13 @@ export default async function Page() {
             </Link>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
-            By using Shelf, you agree to your deployment policies including{" "}
+            By using Shelf, you agree to our {" "}
             <Link href="/privacy" className="underline underline-offset-4">
               Privacy policy
+            </Link>
+            {" "} and our {" "}
+            <Link href="/terms" className="underline underline-offset-4">
+              Terms of Service
             </Link>
             .
           </p>

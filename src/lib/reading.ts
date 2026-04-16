@@ -3,6 +3,7 @@ import { and, desc, eq, gte } from "drizzle-orm"
 import { db } from "@/src/db"
 import { booksTable, type bookStatuses } from "@/src/db/schema/book"
 import {
+  bookHighlightsTable,
   bookProgressEventsTable,
   progressEventTypes,
   readingGoalsTable,
@@ -18,6 +19,19 @@ export type ReadingSessionInput = {
   pagesRead: number
   notes?: string | null
   startedAt?: Date
+}
+
+export type BookHighlightInput = {
+  bookId: string
+  quote: string
+  page?: number | null
+  highlightedAt?: Date | null
+}
+
+export type UpdateBookHighlightInput = {
+  quote?: string
+  page?: number | null
+  highlightedAt?: Date | null
 }
 
 export async function createProgressEvent(input: {
@@ -206,3 +220,93 @@ export async function setDailyPageGoal(userId: string, pagesPerDay: number) {
   return goal
 }
 
+export async function getBookHighlights(userId: string, bookId: string, limit = 100) {
+  return db.query.bookHighlights.findMany({
+    where: and(eq(bookHighlightsTable.userId, userId), eq(bookHighlightsTable.bookId, bookId)),
+    orderBy: [desc(bookHighlightsTable.highlightedAt), desc(bookHighlightsTable.createdAt)],
+    limit,
+  })
+}
+
+export async function createBookHighlight(userId: string, input: BookHighlightInput) {
+  const quote = input.quote.trim()
+  if (!quote) {
+    throw new Error("Highlight quote is required")
+  }
+
+  if (input.page !== undefined && input.page !== null && input.page <= 0) {
+    throw new Error("Page must be greater than zero")
+  }
+
+  const book = await db.query.books.findFirst({
+    where: and(eq(booksTable.id, input.bookId), eq(booksTable.userId, userId)),
+  })
+
+  if (!book) {
+    throw new Error("Book not found")
+  }
+
+  const [highlight] = await db
+    .insert(bookHighlightsTable)
+    .values({
+      id: crypto.randomUUID(),
+      userId,
+      bookId: input.bookId,
+      quote,
+      page: input.page ?? null,
+      highlightedAt: input.highlightedAt ?? null,
+      updatedAt: new Date(),
+    })
+    .returning()
+
+  return highlight
+}
+
+export async function updateBookHighlight(userId: string, highlightId: string, input: UpdateBookHighlightInput) {
+  const existing = await db.query.bookHighlights.findFirst({
+    where: and(eq(bookHighlightsTable.id, highlightId), eq(bookHighlightsTable.userId, userId)),
+  })
+
+  if (!existing) {
+    throw new Error("Highlight not found")
+  }
+
+  const nextQuote = input.quote === undefined ? existing.quote : input.quote.trim()
+  if (!nextQuote) {
+    throw new Error("Highlight quote is required")
+  }
+
+  const nextPage = input.page === undefined ? existing.page : input.page
+  if (nextPage !== null && nextPage !== undefined && nextPage <= 0) {
+    throw new Error("Page must be greater than zero")
+  }
+
+  const nextHighlightedAt =
+    input.highlightedAt === undefined ? existing.highlightedAt : input.highlightedAt
+
+  const [highlight] = await db
+    .update(bookHighlightsTable)
+    .set({
+      quote: nextQuote,
+      page: nextPage ?? null,
+      highlightedAt: nextHighlightedAt ?? null,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(bookHighlightsTable.id, highlightId), eq(bookHighlightsTable.userId, userId)))
+    .returning()
+
+  return highlight
+}
+
+export async function deleteBookHighlight(userId: string, highlightId: string) {
+  const [deleted] = await db
+    .delete(bookHighlightsTable)
+    .where(and(eq(bookHighlightsTable.id, highlightId), eq(bookHighlightsTable.userId, userId)))
+    .returning()
+
+  if (!deleted) {
+    throw new Error("Highlight not found")
+  }
+
+  return deleted
+}

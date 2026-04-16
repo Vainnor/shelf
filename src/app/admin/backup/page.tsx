@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src
 import { db } from "@/src/db"
 import { requireAdminUser } from "@/src/lib/admin"
 import { cn } from "@/src/lib/utils"
+import FullBackupTools from "@/src/components/admin/full-backup-tools"
 
 export const dynamic = "force-dynamic"
 
@@ -71,8 +72,19 @@ export default async function AdminBackupPage() {
             </p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>In-app full backup transfer</CardTitle>
+            <CardDescription>
+              Export the complete application database as JSON and import it into another instance.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FullBackupTools />
+          </CardContent>
+        </Card>
       </section>
     </main>
   )
 }
-

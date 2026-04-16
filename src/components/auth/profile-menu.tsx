@@ -58,18 +58,18 @@ export default function ProfileMenu({
   const initials = getInitials(name, email)
 
   return (
-    <details className="relative">
+    <details className="relative inline-flex items-center">
       <summary
         className={cn(
           buttonVariants({ variant: "outline", size: "default" }),
-          "list-none gap-2 pr-2 [&::-webkit-details-marker]:hidden"
+          "list-none items-center gap-2 pr-2 [&::-webkit-details-marker]:hidden"
         )}
       >
         {image && !avatarError ? (
           <img
             src={image}
             alt="Profile avatar"
-            className="size-7 rounded-full border border-border object-cover mt-1"
+            className="size-7 rounded-full border border-border object-cover"
             onError={() => setAvatarError(true)}
           />
         ) : (
@@ -156,4 +156,3 @@ export default function ProfileMenu({
     </details>
   )
 }
-

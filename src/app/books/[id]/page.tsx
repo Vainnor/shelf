@@ -1,16 +1,27 @@
 "use client"
 
+import { ArrowLeft, Edit2, Trash2, BookOpen, Quote } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { ArrowLeft, Edit2, Trash2, BookOpen } from "lucide-react"
 import { toast } from "sonner"
 
 import { Badge } from "@/src/components/ui/badge"
 import { Button } from "@/src/components/ui/button"
+import { Input } from "@/src/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import type { booksTable } from "@/src/db/schema/book"
 import type { UserRole } from "@/src/db/schema/user"
-import { getBookTimeline, getBooks, logBookReadingSession, removeBook, changeBookStatus } from "@/src/actions/books"
+import {
+  addBookHighlightForBook,
+  changeBookStatus,
+  editBookHighlightForBook,
+  getBookHighlightsForBook,
+  getBookTimeline,
+  getBooks,
+  logBookReadingSession,
+  removeBook,
+  removeBookHighlightForBook,
+} from "@/src/actions/books"
 import { getSession } from "@/src/actions/auth"
 import ProfileMenu from "@/src/components/auth/profile-menu"
 
@@ -28,6 +39,7 @@ type Session = {
   }
 } | null
 type ProgressEvent = Awaited<ReturnType<typeof getBookTimeline>>[number]
+type BookHighlight = Awaited<ReturnType<typeof getBookHighlightsForBook>>[number]
 
 const statusColors = {
   to_read: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
@@ -51,6 +63,13 @@ export default function BookDetailPage() {
   const [loading, setLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
   const [timeline, setTimeline] = useState<ProgressEvent[]>([])
+  const [highlights, setHighlights] = useState<BookHighlight[]>([])
+  const [highlightQuote, setHighlightQuote] = useState("")
+  const [highlightPage, setHighlightPage] = useState("")
+  const [highlightedDate, setHighlightedDate] = useState("")
+  const [editingHighlightId, setEditingHighlightId] = useState<string | null>(null)
+  const [isSavingHighlight, setIsSavingHighlight] = useState(false)
+  const [isDeletingHighlightId, setIsDeletingHighlightId] = useState<string | null>(null)
   const [sessionMinutes, setSessionMinutes] = useState("30")
   const [sessionPages, setSessionPages] = useState("15")
   const [sessionNotes, setSessionNotes] = useState("")
@@ -113,6 +132,21 @@ export default function BookDetailPage() {
     }
 
     fetchTimeline()
+  }, [session?.user?.id, bookId])
+
+  useEffect(() => {
+    const fetchHighlights = async () => {
+      if (!session?.user?.id) return
+
+      try {
+        const items = await getBookHighlightsForBook(bookId, 100)
+        setHighlights(items)
+      } catch (error) {
+        console.error("Error fetching highlights:", error)
+      }
+    }
+
+    fetchHighlights()
   }, [session?.user?.id, bookId])
 
   const handleDelete = async () => {
@@ -180,6 +214,96 @@ export default function BookDetailPage() {
       toast.error("Failed to log reading session")
     } finally {
       setIsLoggingSession(false)
+    }
+  }
+
+  const resetHighlightForm = () => {
+    setEditingHighlightId(null)
+    setHighlightQuote("")
+    setHighlightPage("")
+    setHighlightedDate("")
+  }
+
+  const reloadHighlights = async () => {
+    if (!session?.user?.id) return
+
+    const items = await getBookHighlightsForBook(bookId, 100)
+    setHighlights(items)
+  }
+
+  const handleSubmitHighlight = async () => {
+    if (!book) {
+      return
+    }
+
+    const quote = highlightQuote.trim()
+    if (!quote) {
+      toast.error("Quote is required")
+      return
+    }
+
+    const pageValue = highlightPage.trim()
+    const parsedPage = pageValue ? Number(pageValue) : null
+    if (pageValue && (parsedPage === null || !Number.isFinite(parsedPage) || parsedPage <= 0)) {
+      toast.error("Page must be a positive number")
+      return
+    }
+
+    setIsSavingHighlight(true)
+    try {
+      if (editingHighlightId) {
+        await editBookHighlightForBook({
+          highlightId: editingHighlightId,
+          quote,
+          page: parsedPage,
+          highlightedAt: highlightedDate || null,
+        })
+        toast.success("Highlight updated")
+      } else {
+        await addBookHighlightForBook({
+          bookId: book.id,
+          quote,
+          page: parsedPage,
+          highlightedAt: highlightedDate || null,
+        })
+        toast.success("Highlight saved")
+      }
+
+      await reloadHighlights()
+      resetHighlightForm()
+    } catch (error) {
+      console.error("Error saving highlight:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to save highlight")
+    } finally {
+      setIsSavingHighlight(false)
+    }
+  }
+
+  const handleEditHighlight = (highlight: BookHighlight) => {
+    setEditingHighlightId(highlight.id)
+    setHighlightQuote(highlight.quote)
+    setHighlightPage(highlight.page ? String(highlight.page) : "")
+    setHighlightedDate(
+      highlight.highlightedAt ? new Date(highlight.highlightedAt).toISOString().slice(0, 10) : ""
+    )
+  }
+
+  const handleDeleteHighlight = async (highlightId: string) => {
+    if (!confirm("Delete this highlight?")) return
+
+    setIsDeletingHighlightId(highlightId)
+    try {
+      await removeBookHighlightForBook(highlightId)
+      await reloadHighlights()
+      if (editingHighlightId === highlightId) {
+        resetHighlightForm()
+      }
+      toast.success("Highlight deleted")
+    } catch (error) {
+      console.error("Error deleting highlight:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to delete highlight")
+    } finally {
+      setIsDeletingHighlightId(null)
     }
   }
 
@@ -356,6 +480,90 @@ export default function BookDetailPage() {
                 <Button onClick={handleLogReadingSession} disabled={isLoggingSession}>
                   {isLoggingSession ? "Logging..." : "Log session"}
                 </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Quote className="size-4" />
+                  Highlights and quotes
+                </CardTitle>
+                <CardDescription>
+                  Save memorable lines with an optional page number and highlight date.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <textarea
+                  value={highlightQuote}
+                  onChange={(event) => setHighlightQuote(event.target.value)}
+                  placeholder="Write the quote or highlight text"
+                  rows={3}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={highlightPage}
+                    onChange={(event) => setHighlightPage(event.target.value)}
+                    placeholder="Page (optional)"
+                  />
+                  <Input
+                    type="date"
+                    value={highlightedDate}
+                    onChange={(event) => setHighlightedDate(event.target.value)}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={handleSubmitHighlight} disabled={isSavingHighlight}>
+                    {isSavingHighlight
+                      ? (editingHighlightId ? "Saving..." : "Adding...")
+                      : (editingHighlightId ? "Save highlight" : "Add highlight")}
+                  </Button>
+                  {editingHighlightId ? (
+                    <Button variant="outline" onClick={resetHighlightForm} disabled={isSavingHighlight}>
+                      Cancel edit
+                    </Button>
+                  ) : null}
+                </div>
+
+                <div className="space-y-2">
+                  {highlights.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No highlights yet.</p>
+                  ) : (
+                    highlights.map((highlight) => (
+                      <div key={highlight.id} className="rounded-md border border-border/70 px-3 py-3 text-sm">
+                        <p className="whitespace-pre-wrap leading-6">{`"${highlight.quote}"`}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                          {highlight.page ? <span>Page {highlight.page}</span> : null}
+                          {highlight.highlightedAt ? (
+                            <span>Highlighted {new Date(highlight.highlightedAt).toLocaleDateString()}</span>
+                          ) : null}
+                          <span>Saved {new Date(highlight.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        <div className="mt-2 flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditHighlight(highlight)}
+                            disabled={isSavingHighlight || isDeletingHighlightId === highlight.id}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteHighlight(highlight.id)}
+                            disabled={isDeletingHighlightId === highlight.id}
+                          >
+                            {isDeletingHighlightId === highlight.id ? "Deleting..." : "Delete"}
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </CardContent>
             </Card>
 
