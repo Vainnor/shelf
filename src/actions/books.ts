@@ -3,6 +3,8 @@
 import { getActiveSession } from "@/src/lib/session"
 import {
   listBooksForUser,
+  listReadingRemindersForUser,
+  listRecommendationsForUser,
   createBook,
   updateBook,
   updateBookStatus,
@@ -13,6 +15,7 @@ import {
 } from "@/src/lib/books"
 import { db } from "@/src/db"
 import { booksTable } from "@/src/db/schema/book"
+import { usersTable } from "@/src/db/schema/user"
 import { and, eq, gte } from "drizzle-orm"
 import {
   createProgressEvent,
@@ -306,6 +309,37 @@ export async function getBestBooksThisYear(limit = 5) {
     orderBy: (table, { desc }) => [desc(table.rating), desc(table.finishedAt), desc(table.updatedAt)],
     limit,
   })
+}
+
+export async function getReadingReminders(limit = 8) {
+  const session = await requireActiveSession()
+  const user = await db.query.user.findFirst({ where: eq(usersTable.id, session.user.id) })
+
+  if (!user) {
+    throw new Error("User not found")
+  }
+
+  if (!user.readingReminderEnabled) {
+    return {
+      enabled: false,
+      channel: user.readingReminderChannel,
+      days: user.readingReminderDays,
+      reminders: [],
+    }
+  }
+
+  const reminders = await listReadingRemindersForUser(user.id, user.readingReminderDays, limit)
+  return {
+    enabled: true,
+    channel: user.readingReminderChannel,
+    days: user.readingReminderDays,
+    reminders,
+  }
+}
+
+export async function getBookRecommendations(limit = 8) {
+  const session = await requireActiveSession()
+  return listRecommendationsForUser(session.user.id, limit)
 }
 
 async function getBookByIdForUser(userId: string, bookId: string) {

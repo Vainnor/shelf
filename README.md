@@ -77,6 +77,37 @@ Auth routes and pages:
 
 - `/login`
 - `/signup`
+- `/forgot-password`
+- `/reset-password`
+
+### Password reset email delivery (SES)
+
+Password reset emails are sent through AWS SES when these env vars are set:
+
+```bash
+AWS_REGION=
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+SES_FROM_EMAIL=
+```
+
+`SES_FROM_EMAIL` must be a verified sender identity in SES.
+
+You can also use SMTP transport (including SES SMTP credentials) by setting:
+
+```bash
+EMAIL_TRANSPORT=smtp
+SMTP_HOST=email-smtp.us-east-1.amazonaws.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USERNAME=
+SMTP_PASSWORD=
+SMTP_FROM_EMAIL=
+```
+
+If `EMAIL_TRANSPORT` is unset, the app prefers SMTP when `SMTP_HOST` is present; otherwise it uses SES API.
+
+Admins can use `/admin/health` -> `Email diagnostics` to verify config presence and trigger a test reset email to their own account.
 
 ## Development
 
@@ -138,6 +169,31 @@ Example:
 pnpm drizzle-kit generate
 pnpm drizzle-kit push
 ```
+
+## Reminders worker (stub)
+
+Reading reminders are surfaced in-app and can be dispatched by a tiny worker stub.
+Current dispatch is console-based (no real email provider yet).
+
+```bash
+pnpm worker:reminders:once
+pnpm worker:reminders
+```
+
+Optional env vars:
+
+```bash
+REMINDER_WORKER_INTERVAL_MS=900000
+REMINDER_WORKER_MAX_USERS=100
+```
+
+## Recommendations
+
+Dashboard recommendations currently use a simple rule-based scorer combining:
+
+- author overlap with your finished books
+- keyword overlap from finished title/notes/review text
+- community rating boost
 
 ## Next implementation steps
 

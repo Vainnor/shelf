@@ -184,7 +184,7 @@ export async function sendPasswordResetByAdmin(formData: FormData) {
   await auth.api.requestPasswordReset({
     body: {
       email,
-      redirectTo: "/login",
+      redirectTo: "/reset-password",
     },
   })
 

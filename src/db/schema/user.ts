@@ -4,12 +4,15 @@ import {
   pgEnum,
   pgTable,
   text,
+  integer,
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core"
 
 export const userRoles = ["user", "editor", "moderator", "admin"] as const
 export type UserRole = (typeof userRoles)[number]
+export const reminderChannels = ["email", "push"] as const
+export type ReminderChannel = (typeof reminderChannels)[number]
 
 export const userRoleEnum = pgEnum("user_role", userRoles)
 
@@ -21,6 +24,9 @@ export const usersTable = pgTable("users", {
   role: userRoleEnum("role").notNull().default("user"),
   isDisabled: boolean("is_disabled").notNull().default(false),
   publicProfileEnabled: boolean("public_profile_enabled").notNull().default(false),
+  readingReminderEnabled: boolean("reading_reminder_enabled").notNull().default(false),
+  readingReminderChannel: text("reading_reminder_channel").notNull().default("email"),
+  readingReminderDays: integer("reading_reminder_days").notNull().default(7),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),

@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Geist_Mono, Inter } from "next/font/google"
 
 import "./globals.css"
+import SiteFooter from "@/src/components/site-footer"
 import { ThemeProvider } from "@/src/components/theme-provider"
 import { cn } from "@/src/lib/utils"
 import { Toaster } from "@/src/components/ui/sonner"
@@ -31,7 +32,10 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>
-          {children}
+          <div className="flex min-h-svh flex-col">
+            <div className="flex-1">{children}</div>
+            <SiteFooter />
+          </div>
           <Toaster position="bottom-right" richColors closeButton />
         </ThemeProvider>
       </body>

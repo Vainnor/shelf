@@ -34,6 +34,9 @@ export default async function SettingsPage() {
           initialEmail={user.email}
           initialUsername={user.username ?? ""}
           initialPublicProfileEnabled={user.publicProfileEnabled}
+          initialReadingReminderEnabled={user.readingReminderEnabled}
+          initialReadingReminderChannel={user.readingReminderChannel}
+          initialReadingReminderDays={user.readingReminderDays}
           userId={user.id}
           role={user.role}
         />

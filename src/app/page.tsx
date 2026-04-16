@@ -211,6 +211,13 @@ export default async function Page() {
               Existing user login
             </Link>
           </div>
+          <p className="mt-4 text-xs text-muted-foreground">
+            By using Shelf, you agree to your deployment policies including{" "}
+            <Link href="/privacy" className="underline underline-offset-4">
+              Privacy policy
+            </Link>
+            .
+          </p>
         </div>
       </section>
     </main>
