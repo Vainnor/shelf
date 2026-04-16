@@ -1,39 +1,133 @@
 # Shelf
 
-Shelf is a book-tracking app MVP built with Next.js, Better Auth, Drizzle, and shadcn/ui.
+Shelf is a self-hosted reading tracker built with Next.js, Better Auth, Drizzle ORM, PostgreSQL, and shadcn/ui.
 
-## MVP scope
+It supports personal reading workflows, social features, club collaboration, and admin operations for managing a hosted instance.
 
-- Email/password authentication with Better Auth
-- Social sign-in with major OAuth providers when credentials are configured
-- Custom OAuth provider support for self-hosted deployments
-- Three book shelves:
-  - To read
-  - Currently reading
-  - Read
-- Book metadata:
-  - Title
-  - Author
-  - Total pages
-  - Current page
-  - Notes
-  - Cover image URL
-  - ISBN
-- Per-user ownership for all books
+## Features
 
-## Database
+### Reading and library
 
-The Drizzle schema currently includes:
+- Three reading states: `to_read`, `reading`, `read`
+- Rich book metadata: title, author, pages, ISBN, cover URL, notes, rating, review, favorites
+- ISBN lookup via OpenLibrary
+- Reading sessions with timeline/progress events
+- Book highlights/quotes with optional page/date
+- Weekly insights and best-books-this-year summaries
+- Rule-based recommendations from completed books and community ratings
 
-- `users`
-- `sessions`
-- `accounts`
-- `verification_tokens`
-- `books`
+### Social and clubs
+
+- Public profiles (`/u/[username]`) with follow/unfollow
+- Social feed from followed users
+- Book clubs with:
+  - public discovery
+  - join/leave
+  - invites and responses
+  - member roles (`owner`, `moderator`, `member`)
+  - shared club shelf and posts
+
+### Account and admin
+
+- Email/password auth via Better Auth
+- Optional OAuth providers (when env vars are configured)
+- Optional custom OAuth providers for self-hosted identity systems
+- Reading reminder preferences (channel + inactivity threshold)
+- User settings: profile, reminders, public profile, password reset, account export/delete
+- Admin dashboard: users, signup policy, audit logs, health checks, backup tools
+- Full-database JSON export/import in admin backup tools
+
+## Tech stack
+
+- **Framework:** Next.js 16 (App Router)
+- **Language:** TypeScript
+- **Database:** PostgreSQL + Drizzle ORM
+- **Auth:** Better Auth
+- **UI:** React 19, Tailwind CSS 4, shadcn/ui, lucide-react
+- **Package manager:** pnpm 10
+
+## Project structure
+
+```text
+src/
+  app/                 # Routes/pages (dashboard, library, social, clubs, admin, auth)
+  actions/             # Server actions
+  components/          # UI and feature components
+  db/                  # Drizzle db setup + schema
+  lib/                 # Domain logic (auth, books, reminders, admin, backup)
+scripts/
+  reminder-worker.ts   # Reminder worker loop/once runner
+  run-migrations.mjs   # Migration/push orchestration script
+drizzle/               # SQL migrations + metadata
+```
+
+## Prerequisites
+
+- Node.js 22+
+- pnpm 10+
+- PostgreSQL 17+ (or Docker)
+
+## Local development (without Docker)
+
+1. Install dependencies:
+
+   ```bash
+   pnpm install
+   ```
+
+2. Copy env template:
+
+   ```bash
+   cp .env.example .env.local
+   ```
+
+3. Configure at minimum:
+
+   ```bash
+   BETTER_AUTH_SECRET=replace-with-a-long-random-secret
+   BETTER_AUTH_URL=http://localhost:3000
+   NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3000
+   DATABASE_URL=postgres://user:password@localhost:5432/shelf
+   ```
+
+4. Run migrations:
+
+   ```bash
+   node scripts/run-migrations.mjs
+   ```
+
+5. Start dev server:
+
+   ```bash
+   pnpm dev
+   ```
+
+6. Open `http://localhost:3000`.
+   - First-time setup redirects to `/setup/admin` to bootstrap the initial admin user.
+
+## Docker
+
+### Development stack
+
+Includes app + postgres + migration job + caddy, exposed on `http://localhost:8080`.
+
+```bash
+docker compose -f compose.dev.yml up --build
+```
+
+### Production-style stack
+
+Uses `ghcr.io/vainnor/shelf:latest` for app and migrate services, app exposed on port `8888`.
+
+```bash
+docker compose -f compose.prod.yml up --build
+```
 
 ## Environment variables
 
-Copy `.env.example` to `.env.local` and set:
+Use `.env.example` as the source of truth.
+
+### Required
 
 ```bash
 BETTER_AUTH_SECRET=
@@ -42,11 +136,9 @@ NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3000
 DATABASE_URL=
 ```
 
-### Optional OAuth providers
+### Optional social OAuth providers
 
-Set both `*_CLIENT_ID` and `*_CLIENT_SECRET` for each provider you want enabled.
-
-Built-in providers wired by default:
+Enable by setting both `*_CLIENT_ID` and `*_CLIENT_SECRET` for each provider:
 
 - Google
 - GitHub
@@ -56,33 +148,33 @@ Built-in providers wired by default:
 - LinkedIn
 - Apple
 - Facebook
-- X/Twitter
+- X / Twitter
 - Reddit
 - Spotify
 - Twitch
 - Slack
 - Notion
-- TikTok
 
-### Custom OAuth for self-hosted
+### Optional custom OAuth providers
 
-Use `CUSTOM_OAUTH_PROVIDERS_JSON` with an array of Better Auth `GenericOAuthConfig`
-objects (you can include an optional `label` field for UI display).
+`CUSTOM_OAUTH_PROVIDERS_JSON` accepts an array of Better Auth generic OAuth configs:
 
 ```bash
-CUSTOM_OAUTH_PROVIDERS_JSON='[{"providerId":"my-idp","label":"My IDP","discoveryUrl":"https://id.example.com/.well-known/openid-configuration","clientId":"...","clientSecret":"...","scopes":["openid","profile","email"]}]'
+CUSTOM_OAUTH_PROVIDERS_JSON='[
+  {
+    "providerId": "my-idp",
+    "label": "My IDP",
+    "discoveryUrl": "https://id.example.com/.well-known/openid-configuration",
+    "clientId": "...",
+    "clientSecret": "...",
+    "scopes": ["openid", "profile", "email"]
+  }
+]'
 ```
 
-Auth routes and pages:
+### Email/password reset delivery
 
-- `/login`
-- `/signup`
-- `/forgot-password`
-- `/reset-password`
-
-### Password reset email delivery (SES)
-
-Password reset emails are sent through AWS SES when these env vars are set:
+AWS SES mode:
 
 ```bash
 AWS_REGION=
@@ -91,13 +183,11 @@ AWS_SECRET_ACCESS_KEY=
 SES_FROM_EMAIL=
 ```
 
-`SES_FROM_EMAIL` must be a verified sender identity in SES.
-
-You can also use SMTP transport (including SES SMTP credentials) by setting:
+SMTP mode:
 
 ```bash
 EMAIL_TRANSPORT=smtp
-SMTP_HOST=email-smtp.us-east-1.amazonaws.com
+SMTP_HOST=
 SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USERNAME=
@@ -105,99 +195,65 @@ SMTP_PASSWORD=
 SMTP_FROM_EMAIL=
 ```
 
-If `EMAIL_TRANSPORT` is unset, the app prefers SMTP when `SMTP_HOST` is present; otherwise it uses SES API.
+If `EMAIL_TRANSPORT` is unset, Shelf prefers SMTP when `SMTP_HOST` is present; otherwise it uses SES.
 
-Admins can use `/admin/health` -> `Email diagnostics` to verify config presence and trigger a test reset email to their own account.
-
-## Development
-
-```bash
-pnpm dev
-```
-
-## Docker Compose
-
-### Local development
-
-Uses the app container, Postgres, and Caddy on port `8080`.
-Migrations run automatically before the app starts.
-
-```bash
-docker compose -f compose.dev.yml up --build
-```
-
-### Production-style local run
-
-Uses the production image target with Caddy on port `80`.
-Migrations run automatically before the app starts.
-
-```bash
-docker compose -f compose.prod.yml up --build
-```
-
-### Self-hosted deployment
-
-Run only the app and database when you want to place your own proxy in front of it.
-
-```bash
-docker compose -f compose.selfhosted.yml up -d
-```
-
-If you want the bundled Caddy config for self-hosting, add the optional overlay:
-
-```bash
-docker compose -f compose.selfhosted.yml -f compose.selfhosted.caddy.override.yml up -d
-```
-
-### Image versioning
-
-Container image tags follow this pattern:
-
-```text
-<package.json version>.<git short sha>
-```
-
-Example:
-
-```text
-0.0.1.abc123def456
-```
-
-## Migrations
-
-```bash
-pnpm drizzle-kit generate
-pnpm drizzle-kit push
-```
-
-## Reminders worker (stub)
-
-Reading reminders are surfaced in-app and can be dispatched by a tiny worker stub.
-Current dispatch is console-based (no real email provider yet).
-
-```bash
-pnpm worker:reminders:once
-pnpm worker:reminders
-```
-
-Optional env vars:
+### Reminder worker controls
 
 ```bash
 REMINDER_WORKER_INTERVAL_MS=900000
 REMINDER_WORKER_MAX_USERS=100
 ```
 
-## Recommendations
+## Scripts
 
-Dashboard recommendations currently use a simple rule-based scorer combining:
+```bash
+pnpm dev                    # Start dev server (Turbopack)
+pnpm build                  # Production build
+pnpm start                  # Start production server
+pnpm lint                   # ESLint
+pnpm typecheck              # TypeScript check
+pnpm worker:reminders       # Run reminder worker loop
+pnpm worker:reminders:once  # Run one reminder cycle
+```
 
-- author overlap with your finished books
-- keyword overlap from finished title/notes/review text
-- community rating boost
+## Database and migrations
 
-## Next implementation steps
+- Drizzle config: `drizzle.config.ts`
+- Migration SQL files: `drizzle/*.sql`
+- Migration runner: `scripts/run-migrations.mjs`
 
-1. Add a Better Auth client for sign-in and sign-up UI.
-2. Build protected pages for the three reading lists.
-3. Add create/edit book dialogs and status updates.
-4. Add ISBN lookup and richer book metadata later.
+`run-migrations.mjs` automatically chooses `drizzle-kit migrate` or `drizzle-kit push` based on DB state and performs schema readiness checks.
+
+Manual commands:
+
+```bash
+pnpm drizzle-kit generate
+pnpm drizzle-kit migrate
+pnpm drizzle-kit push
+```
+
+## Operations
+
+- **Admin health:** `/admin/health` (DB connectivity, migration alignment, email diagnostics)
+- **Admin backup:** `/admin/backup` (backup guidance + full JSON export/import)
+- **Admin users:** `/admin` and `/admin/users/[id]`
+- **Docs page:** `/docs`
+
+## CI/CD workflows
+
+- `.github/workflows/pr-validation.yml`
+  - install, lint, typecheck, build
+- `.github/workflows/docker-build-test.yml`
+  - docker image build test on PR/non-main pushes
+- `.github/workflows/docker-build-prod.yml`
+  - build + push GHCR image on `main`
+
+Image tags follow:
+
+```text
+<package.json version>.<git short sha>
+```
+
+## License
+
+This project is licensed under the terms in [`LICENSE`](./LICENSE).
