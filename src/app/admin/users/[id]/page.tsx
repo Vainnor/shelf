@@ -8,7 +8,7 @@ import { buttonVariants } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { Input } from "@/src/components/ui/input"
 import { db } from "@/src/db"
-import { usersTable } from "@/src/db/schema/user"
+import { userRoles, usersTable } from "@/src/db/schema/user"
 import { requireAdminUser } from "@/src/lib/admin"
 import { cn } from "@/src/lib/utils"
 
@@ -60,6 +60,23 @@ export default async function AdminUserEditPage({ params }: { params: Promise<{ 
                   Email
                 </label>
                 <Input id="email" name="email" type="email" defaultValue={user.email} required />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium" htmlFor="role">
+                  Role
+                </label>
+                <select
+                  id="role"
+                  name="role"
+                  defaultValue={user.role}
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                >
+                  {userRoles.map((role) => (
+                    <option key={role} value={role}>
+                      {role}
+                    </option>
+                  ))}
+                </select>
               </div>
               <button type="submit" className={cn(buttonVariants({ variant: "default", size: "default" }))}>
                 Save changes

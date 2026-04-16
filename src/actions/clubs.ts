@@ -13,6 +13,7 @@ import {
   bookClubsTable,
 } from "@/src/db/schema/reading"
 import { usersTable } from "@/src/db/schema/user"
+import { writeAuditLog } from "@/src/lib/audit"
 import { getActiveSession } from "@/src/lib/session"
 import { canManageRole, requireClubMembership, requireClubRole } from "@/src/lib/clubs"
 
@@ -175,6 +176,15 @@ export async function addBookToClubShelf(input: {
     details: `${title} by ${author}`,
   })
 
+  await writeAuditLog({
+    actorUserId: session.user.id,
+    scope: "club",
+    action: "club.book_added",
+    targetType: "club",
+    targetId: input.clubId,
+    metadata: { title, author },
+  })
+
   revalidatePath(`/clubs/${input.clubId}`)
   return created
 }
@@ -206,6 +216,15 @@ export async function removeBookFromClubShelf(clubId: string, clubBookId: string
     actorUserId: session.user.id,
     activityType: "book_removed",
     details: `${book.title} by ${book.author}`,
+  })
+
+  await writeAuditLog({
+    actorUserId: session.user.id,
+    scope: "club",
+    action: "club.book_removed",
+    targetType: "club",
+    targetId: clubId,
+    metadata: { title: book.title, author: book.author },
   })
 
   revalidatePath(`/clubs/${clubId}`)
@@ -251,6 +270,15 @@ export async function postClubDiscussion(
     actorUserId: session.user.id,
     activityType: "discussion_posted",
     details: trimmedTitle,
+  })
+
+  await writeAuditLog({
+    actorUserId: session.user.id,
+    scope: "club",
+    action: "club.discussion_posted",
+    targetType: "club",
+    targetId: clubId,
+    metadata: { title: trimmedTitle, isAnnouncement: Boolean(input.isAnnouncement) },
   })
 
   revalidatePath(`/clubs/${clubId}`)
@@ -389,6 +417,15 @@ export async function inviteUserToClub(input: { clubId: string; username: string
     details: `Invited @${target.username ?? target.email} as ${desiredRole}`,
   })
 
+  await writeAuditLog({
+    actorUserId: session.user.id,
+    scope: "club",
+    action: "club.invite_sent",
+    targetType: "club",
+    targetId: input.clubId,
+    metadata: { invitedUserId: target.id, invitedRole: desiredRole },
+  })
+
   revalidatePath(`/clubs/${input.clubId}`)
   return invite
 }
@@ -417,6 +454,15 @@ export async function revokeClubInvite(clubId: string, inviteId: string) {
     clubId,
     actorUserId: session.user.id,
     activityType: "invite_revoked",
+  })
+
+  await writeAuditLog({
+    actorUserId: session.user.id,
+    scope: "club",
+    action: "club.invite_revoked",
+    targetType: "club",
+    targetId: clubId,
+    metadata: { inviteId },
   })
 
   revalidatePath(`/clubs/${clubId}`)
@@ -459,11 +505,29 @@ export async function respondToClubInvite(inviteId: string, accept: boolean) {
       actorUserId: session.user.id,
       activityType: "invite_accepted",
     })
+
+    await writeAuditLog({
+      actorUserId: session.user.id,
+      scope: "club",
+      action: "club.invite_accepted",
+      targetType: "club",
+      targetId: invite.clubId,
+      metadata: { inviteId, role: invite.role },
+    })
   } else {
     await logClubActivity({
       clubId: invite.clubId,
       actorUserId: session.user.id,
       activityType: "invite_declined",
+    })
+
+    await writeAuditLog({
+      actorUserId: session.user.id,
+      scope: "club",
+      action: "club.invite_declined",
+      targetType: "club",
+      targetId: invite.clubId,
+      metadata: { inviteId },
     })
   }
 
@@ -504,6 +568,15 @@ export async function updateClubMemberRole(clubId: string, targetUserId: string,
     details: `Changed member role to ${role}`,
   })
 
+  await writeAuditLog({
+    actorUserId: session.user.id,
+    scope: "club",
+    action: "club.member_role_changed",
+    targetType: "club",
+    targetId: clubId,
+    metadata: { targetUserId, role },
+  })
+
   revalidatePath(`/clubs/${clubId}`)
   return { ok: true }
 }
@@ -532,6 +605,15 @@ export async function removeClubMember(clubId: string, targetUserId: string) {
     clubId,
     actorUserId: session.user.id,
     activityType: "member_removed",
+  })
+
+  await writeAuditLog({
+    actorUserId: session.user.id,
+    scope: "club",
+    action: "club.member_removed",
+    targetType: "club",
+    targetId: clubId,
+    metadata: { targetUserId },
   })
 
   revalidatePath(`/clubs/${clubId}`)

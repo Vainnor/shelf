@@ -1,5 +1,5 @@
-import { desc, eq, sql } from "drizzle-orm"
-import { ArrowLeft, ShieldUser, UserRound } from "lucide-react"
+import { sql } from "drizzle-orm"
+import { Activity, ArrowLeft, DatabaseBackup, ShieldUser } from "lucide-react"
 import Link from "next/link"
 
 import {
@@ -13,7 +13,6 @@ import { buttonVariants } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { db } from "@/src/db"
 import { booksTable } from "@/src/db/schema/book"
-import { usersTable } from "@/src/db/schema/user"
 import { getSystemSettings, requireAdminUser } from "@/src/lib/admin"
 import { cn } from "@/src/lib/utils"
 
@@ -76,6 +75,21 @@ export default async function AdminPage() {
             </form>
           </CardContent>
         </Card>
+
+        <div className="grid gap-3 md:grid-cols-3">
+          <Link href="/admin/audit" className={cn(buttonVariants({ variant: "outline" }), "justify-start gap-2")}>
+            <ShieldUser className="size-4" />
+            Audit logs
+          </Link>
+          <Link href="/admin/health" className={cn(buttonVariants({ variant: "outline" }), "justify-start gap-2")}>
+            <Activity className="size-4" />
+            System health
+          </Link>
+          <Link href="/admin/backup" className={cn(buttonVariants({ variant: "outline" }), "justify-start gap-2")}>
+            <DatabaseBackup className="size-4" />
+            Backup helper
+          </Link>
+        </div>
 
         <Card>
           <CardHeader>

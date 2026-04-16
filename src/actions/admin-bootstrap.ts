@@ -6,6 +6,7 @@ import { db } from "@/src/db"
 import { systemSettingsTable } from "@/src/db/schema/system"
 import { usersTable } from "@/src/db/schema/user"
 import { auth } from "@/src/lib/auth"
+import { writeAuditLog } from "@/src/lib/audit"
 import { getSystemSettings } from "@/src/lib/admin"
 
 export async function createInitialAdmin(formData: FormData) {
@@ -61,6 +62,15 @@ export async function createInitialAdmin(formData: FormData) {
       .update(systemSettingsTable)
       .set({ bootstrapCompleted: true, updatedAt: new Date() })
       .where(eq(systemSettingsTable.id, "default"))
+  })
+
+  await writeAuditLog({
+    actorUserId: createdUserId,
+    scope: "admin",
+    action: "system.bootstrap_completed",
+    targetType: "system_settings",
+    targetId: "default",
+    metadata: { email },
   })
 
   return { ok: true }

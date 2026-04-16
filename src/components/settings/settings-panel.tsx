@@ -16,6 +16,7 @@ import { authClient } from "@/src/lib/auth-client"
 import { Button } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { Input } from "@/src/components/ui/input"
+import type { UserRole } from "@/src/db/schema/user"
 
 type SettingsPanelProps = {
   initialName: string
@@ -23,7 +24,7 @@ type SettingsPanelProps = {
   initialUsername: string
   initialPublicProfileEnabled: boolean
   userId: string
-  role: "user" | "admin"
+  role: UserRole
 }
 
 const initialSettingsActionState: SettingsActionState = {

@@ -26,6 +26,7 @@ import {
   tagsTable,
 } from "./schema/reading"
 import { systemSettingsTable } from "./schema/system"
+import { auditLogsTable } from "./schema/audit"
 
 const globalForDb = globalThis as typeof globalThis & {
   pool?: Pool
@@ -63,6 +64,7 @@ export const schema = {
   readingSessions: readingSessionsTable,
   bookProgressEvents: bookProgressEventsTable,
   systemSettings: systemSettingsTable,
+  auditLogs: auditLogsTable,
 } as const
 
 export const db = drizzle(pool, { schema })

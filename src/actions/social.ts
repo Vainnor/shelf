@@ -12,6 +12,7 @@ import {
   followsTable,
 } from "@/src/db/schema/reading"
 import { usersTable } from "@/src/db/schema/user"
+import { writeAuditLog } from "@/src/lib/audit"
 import { getActiveSession } from "@/src/lib/session"
 
 function normalizeUsername(value: string) {
@@ -63,6 +64,18 @@ export async function updatePublicProfileSettings(input: {
   if (!updated) {
     throw new Error("Failed to update profile visibility")
   }
+
+  await writeAuditLog({
+    actorUserId: session.user.id,
+    scope: "social",
+    action: "profile.public_settings_updated",
+    targetType: "user",
+    targetId: session.user.id,
+    metadata: {
+      username,
+      publicProfileEnabled: input.publicProfileEnabled,
+    },
+  })
 
   revalidatePath("/settings")
   revalidatePath(`/u/${username}`)
@@ -159,6 +172,15 @@ export async function followUserByUsername(rawUsername: string) {
     })
     .onConflictDoNothing({ target: [followsTable.followerId, followsTable.followingId] })
 
+  await writeAuditLog({
+    actorUserId: session.user.id,
+    scope: "social",
+    action: "follow.created",
+    targetType: "user",
+    targetId: target.id,
+    metadata: { username: target.username },
+  })
+
   revalidatePath(`/u/${target.username}`)
   revalidatePath("/social")
 
@@ -180,6 +202,15 @@ export async function unfollowUserByUsername(rawUsername: string) {
   await db
     .delete(followsTable)
     .where(and(eq(followsTable.followerId, session.user.id), eq(followsTable.followingId, target.id)))
+
+  await writeAuditLog({
+    actorUserId: session.user.id,
+    scope: "social",
+    action: "follow.removed",
+    targetType: "user",
+    targetId: target.id,
+    metadata: { username: target.username },
+  })
 
   revalidatePath(`/u/${target.username}`)
   revalidatePath("/social")
@@ -298,6 +329,15 @@ export async function createBookClub(input: { name: string; description?: string
     details: `Created club ${club.name}`,
   })
 
+  await writeAuditLog({
+    actorUserId: session.user.id,
+    scope: "club",
+    action: "club.created",
+    targetType: "club",
+    targetId: club.id,
+    metadata: { name: club.name, isPublic: club.isPublic },
+  })
+
   revalidatePath("/social")
 
   return club
@@ -332,6 +372,14 @@ export async function joinBookClub(clubId: string) {
     activityType: "member_joined",
   })
 
+  await writeAuditLog({
+    actorUserId: session.user.id,
+    scope: "club",
+    action: "club.member_joined",
+    targetType: "club",
+    targetId: clubId,
+  })
+
   revalidatePath("/social")
 
   return { ok: true }
@@ -361,6 +409,14 @@ export async function leaveBookClub(clubId: string) {
     clubId,
     actorUserId: session.user.id,
     activityType: "member_left",
+  })
+
+  await writeAuditLog({
+    actorUserId: session.user.id,
+    scope: "club",
+    action: "club.member_left",
+    targetType: "club",
+    targetId: clubId,
   })
 
   revalidatePath("/social")

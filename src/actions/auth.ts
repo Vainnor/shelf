@@ -15,6 +15,9 @@ export async function getSession() {
       ...activeSession.session,
       user: {
         ...activeSession.session.user,
+        name: activeSession.user.name ?? undefined,
+        email: activeSession.user.email,
+        image: activeSession.user.image,
         role: activeSession.user.role,
         username: activeSession.user.username,
         publicProfileEnabled: activeSession.user.publicProfileEnabled,

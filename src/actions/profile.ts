@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache"
 
 import { db } from "@/src/db"
 import { booksTable } from "@/src/db/schema/book"
-import { usersTable } from "@/src/db/schema/user"
+import { type UserRole, usersTable } from "@/src/db/schema/user"
 import { requireAuthenticatedUser } from "@/src/lib/admin"
 
 export type ProfileActionState = {
@@ -21,7 +21,7 @@ export type ProfileSummary = {
     username: string | null
     publicProfileEnabled: boolean
     image: string | null
-    role: "user" | "admin"
+    role: UserRole
     emailVerified: boolean
     createdAt: Date
     updatedAt: Date

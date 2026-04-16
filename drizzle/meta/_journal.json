@@ -29,6 +29,13 @@
       "when": 1776297000000,
       "tag": "0003_club_posts_metadata",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1776384000000,
+      "tag": "0004_audit_and_roles",
+      "breakpoints": true
     }
   ]
 }

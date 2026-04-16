@@ -20,6 +20,7 @@ import ProfileMenu from "@/src/components/auth/profile-menu"
 import { Badge } from "@/src/components/ui/badge"
 import { Button, buttonVariants } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
+import type { UserRole } from "@/src/db/schema/user"
 import { cn } from "@/src/lib/utils"
 
 export const dynamic = "force-dynamic"
@@ -30,7 +31,7 @@ type Session = {
     email: string
     name?: string
     image?: string | null
-    role?: "user" | "admin"
+    role?: UserRole
     username?: string | null
   }
 } | null

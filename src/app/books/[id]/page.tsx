@@ -9,6 +9,7 @@ import { Badge } from "@/src/components/ui/badge"
 import { Button } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import type { booksTable } from "@/src/db/schema/book"
+import type { UserRole } from "@/src/db/schema/user"
 import { getBookTimeline, getBooks, logBookReadingSession, removeBook, changeBookStatus } from "@/src/actions/books"
 import { getSession } from "@/src/actions/auth"
 import ProfileMenu from "@/src/components/auth/profile-menu"
@@ -22,7 +23,7 @@ type Session = {
     email: string
     name?: string
     image?: string | null
-    role?: "user" | "admin"
+    role?: UserRole
     username?: string | null
   }
 } | null
