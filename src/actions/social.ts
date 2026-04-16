@@ -1,11 +1,12 @@
 "use server"
 
-import { and, eq, ilike, inArray, isNotNull, ne } from "drizzle-orm"
+import { and, desc, eq, ilike, inArray, isNotNull, ne } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 
 import { db } from "@/src/db"
 import { booksTable } from "@/src/db/schema/book"
 import {
+  bookHighlightsTable,
   bookClubActivityTable,
   bookClubMembersTable,
   bookClubsTable,
@@ -35,6 +36,8 @@ async function requireActiveSession() {
 export async function updatePublicProfileSettings(input: {
   username: string
   publicProfileEnabled: boolean
+  publicShowHighlights: boolean
+  publicHighlightsLimit: number
 }) {
   const session = await requireActiveSession()
   const username = normalizeUsername(input.username)
@@ -42,6 +45,8 @@ export async function updatePublicProfileSettings(input: {
   if (!isValidUsername(username)) {
     throw new Error("Username must be 3-30 chars with letters, numbers, or underscores")
   }
+
+  const publicHighlightsLimit = Math.min(Math.max(Math.trunc(input.publicHighlightsLimit), 1), 12)
 
   const existing = await db.query.user.findFirst({
     where: and(eq(usersTable.username, username), ne(usersTable.id, session.user.id)),
@@ -56,6 +61,8 @@ export async function updatePublicProfileSettings(input: {
     .set({
       username,
       publicProfileEnabled: input.publicProfileEnabled,
+      publicShowHighlights: input.publicShowHighlights,
+      publicHighlightsLimit,
       updatedAt: new Date(),
     })
     .where(eq(usersTable.id, session.user.id))
@@ -74,6 +81,8 @@ export async function updatePublicProfileSettings(input: {
     metadata: {
       username,
       publicProfileEnabled: input.publicProfileEnabled,
+      publicShowHighlights: input.publicShowHighlights,
+      publicHighlightsLimit,
     },
   })
 
@@ -83,6 +92,8 @@ export async function updatePublicProfileSettings(input: {
   return {
     username: updated.username,
     publicProfileEnabled: updated.publicProfileEnabled,
+    publicShowHighlights: updated.publicShowHighlights,
+    publicHighlightsLimit: updated.publicHighlightsLimit,
   }
 }
 
@@ -98,7 +109,7 @@ export async function getPublicProfileByUsername(rawUsername: string) {
     return null
   }
 
-  const [recentBooks, allBooks, followers, following] = await Promise.all([
+  const [recentBooks, allBooks, followers, following, recentHighlights] = await Promise.all([
     db.query.books.findMany({
       where: eq(booksTable.userId, user.id),
       orderBy: (table, { desc }) => [desc(table.updatedAt)],
@@ -109,7 +120,33 @@ export async function getPublicProfileByUsername(rawUsername: string) {
     }),
     db.query.follows.findMany({ where: eq(followsTable.followingId, user.id) }),
     db.query.follows.findMany({ where: eq(followsTable.followerId, user.id) }),
+    user.publicShowHighlights
+      ? db
+          .select({
+            id: bookHighlightsTable.id,
+            quote: bookHighlightsTable.quote,
+            page: bookHighlightsTable.page,
+            highlightedAt: bookHighlightsTable.highlightedAt,
+            createdAt: bookHighlightsTable.createdAt,
+            bookId: booksTable.id,
+            bookTitle: booksTable.title,
+            bookAuthor: booksTable.author,
+            bookCoverUrl: booksTable.coverUrl,
+          })
+          .from(bookHighlightsTable)
+          .innerJoin(booksTable, eq(bookHighlightsTable.bookId, booksTable.id))
+          .where(eq(bookHighlightsTable.userId, user.id))
+          .orderBy(desc(bookHighlightsTable.highlightedAt), desc(bookHighlightsTable.createdAt))
+          .limit(user.publicHighlightsLimit)
+      : Promise.resolve([]),
   ])
+
+  const reviewedCount = allBooks.filter((book) => Boolean(book.rating) || Boolean(book.review)).length
+  const favoriteCount = allBooks.filter((book) => book.isFavorite).length
+  const pagesTracked = allBooks.reduce(
+    (total, book) => total + (book.totalPages ?? book.currentPage ?? 0),
+    0
+  )
 
   const isFollowing = activeSession
     ? Boolean(
@@ -137,8 +174,16 @@ export async function getPublicProfileByUsername(rawUsername: string) {
       read: allBooks.filter((book) => book.status === "read").length,
       followers: followers.length,
       following: following.length,
+      reviewedCount,
+      favoriteCount,
+      pagesTracked,
     },
     recentBooks,
+    recentHighlights,
+    preferences: {
+      publicShowHighlights: user.publicShowHighlights,
+      publicHighlightsLimit: user.publicHighlightsLimit,
+    },
     viewer: {
       isLoggedIn: Boolean(activeSession),
       isOwnProfile: activeSession?.session.user.id === user.id,

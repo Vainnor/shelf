@@ -11,9 +11,11 @@ import {
   updateReadingReminderSettings,
   updateCurrentUserSettings,
 } from "@/src/actions/settings"
+import { startSocialAccountLink } from "@/src/actions/auth-connections"
 import { updatePublicProfileSettings } from "@/src/actions/social"
 import type { SettingsActionState } from "@/src/actions/settings"
 import { authClient } from "@/src/lib/auth-client"
+import type { AuthProviderOption } from "@/src/lib/auth-providers"
 import { Button } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { Input } from "@/src/components/ui/input"
@@ -24,11 +26,16 @@ type SettingsPanelProps = {
   initialEmail: string
   initialUsername: string
   initialPublicProfileEnabled: boolean
+  initialPublicShowHighlights: boolean
+  initialPublicHighlightsLimit: number
   initialReadingReminderEnabled: boolean
   initialReadingReminderChannel: string
   initialReadingReminderDays: number
+  availableAuthProviders: AuthProviderOption[]
+  linkedProviderIds: string[]
   userId: string
   role: UserRole
+  [key: string]: unknown
 }
 
 const initialSettingsActionState: SettingsActionState = {
@@ -41,9 +48,13 @@ export default function SettingsPanel({
   initialEmail,
   initialUsername,
   initialPublicProfileEnabled,
+  initialPublicShowHighlights,
+  initialPublicHighlightsLimit,
   initialReadingReminderEnabled,
   initialReadingReminderChannel,
   initialReadingReminderDays,
+  availableAuthProviders,
+  linkedProviderIds,
   userId,
   role,
 }: SettingsPanelProps) {
@@ -72,11 +83,17 @@ export default function SettingsPanel({
   const [email, setEmail] = useState(initialEmail)
   const [username, setUsername] = useState(initialUsername)
   const [publicProfileEnabled, setPublicProfileEnabled] = useState(initialPublicProfileEnabled)
+  const [publicShowHighlights, setPublicShowHighlights] = useState(initialPublicShowHighlights)
+  const [publicHighlightsLimit, setPublicHighlightsLimit] = useState(String(initialPublicHighlightsLimit))
   const [readingReminderEnabled, setReadingReminderEnabled] = useState(initialReadingReminderEnabled)
   const [readingReminderChannel, setReadingReminderChannel] = useState(initialReadingReminderChannel)
   const [readingReminderDays, setReadingReminderDays] = useState(String(initialReadingReminderDays))
   const [socialPending, setSocialPending] = useState(false)
+  const [linkingProviderId, setLinkingProviderId] = useState<string | null>(null)
   const [confirmText, setConfirmText] = useState("")
+
+  const connectedProviderIds = useMemo(() => new Set(linkedProviderIds), [linkedProviderIds])
+  const connectableProviders = useMemo(() => availableAuthProviders, [availableAuthProviders])
 
   const fileName = useMemo(() => {
     const safeEmail = email.replace(/[^a-z0-9._-]/gi, "_")
@@ -163,15 +180,63 @@ export default function SettingsPanel({
       const updated = await updatePublicProfileSettings({
         username,
         publicProfileEnabled,
+        publicShowHighlights,
+        publicHighlightsLimit: Number(publicHighlightsLimit || 0),
       })
 
       setUsername(updated.username ?? "")
       setPublicProfileEnabled(updated.publicProfileEnabled)
+      setPublicShowHighlights(updated.publicShowHighlights)
+      setPublicHighlightsLimit(String(updated.publicHighlightsLimit))
       toast.success("Public profile settings updated")
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update social settings")
     } finally {
       setSocialPending(false)
+    }
+  }
+
+  async function handleProviderLink(providerId: string) {
+    setLinkingProviderId(providerId)
+    try {
+      const result = await startSocialAccountLink(providerId)
+      if (!result.url) {
+        throw new Error("Provider did not return a redirect URL")
+      }
+      window.location.href = result.url
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to start provider link")
+      setLinkingProviderId(null)
+    }
+  }
+
+  async function handleOauthProviderLink(providerId: string) {
+    setLinkingProviderId(providerId)
+    try {
+      const result = await authClient.signIn.oauth2({
+        providerId,
+        callbackURL: "/settings",
+        errorCallbackURL: "/settings",
+      })
+
+      if (result?.error) {
+        throw new Error(result.error.message ?? "Provider linking failed")
+      }
+
+      const redirectUrl =
+        result?.data && typeof result.data === "object" && "url" in result.data
+          ? result.data.url
+          : undefined
+
+      if (typeof redirectUrl === "string" && redirectUrl.length > 0) {
+        window.location.href = redirectUrl
+        return
+      }
+
+      window.location.reload()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to start provider link")
+      setLinkingProviderId(null)
     }
   }
 
@@ -283,37 +348,115 @@ export default function SettingsPanel({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSocialSettingsSubmit} className="space-y-3">
-            <label className="space-y-1 text-sm">
-              <span className="font-medium">Username</span>
-              <Input
-                value={username}
-                onChange={(event) => setUsername(event.target.value.toLowerCase())}
-                placeholder="reader_name"
-                required
-                disabled={socialPending}
-              />
-            </label>
+          <form onSubmit={handleSocialSettingsSubmit} className="space-y-4">
+            <div className="space-y-4 rounded-md border border-border/70 bg-muted/20 p-4">
+              <label className="block space-y-1 text-sm">
+                <span className="font-medium">Username</span>
+                <Input
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value.toLowerCase())}
+                  placeholder="reader_name"
+                  required
+                  disabled={socialPending}
+                />
+              </label>
 
-            <label className="mt-2 inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={publicProfileEnabled}
-                onChange={(event) => setPublicProfileEnabled(event.target.checked)}
-                disabled={socialPending}
-                className="size-4"
-              />
-              Enable shareable public profile
-            </label>
+              <div className="space-y-3 border-t border-border/60 pt-3">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={publicProfileEnabled}
+                    onChange={(event) => setPublicProfileEnabled(event.target.checked)}
+                    disabled={socialPending}
+                    className="size-4"
+                  />
+                  Enable shareable public profile
+                </label>
+
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={publicShowHighlights}
+                    onChange={(event) => setPublicShowHighlights(event.target.checked)}
+                    disabled={socialPending || !publicProfileEnabled}
+                    className="size-4"
+                  />
+                  Show recent highlights on public profile
+                </label>
+
+                <label className="block max-w-xs space-y-1 text-sm">
+                  <span className="font-medium">Highlights to show</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={publicHighlightsLimit}
+                    onChange={(event) => setPublicHighlightsLimit(event.target.value)}
+                    disabled={socialPending || !publicProfileEnabled || !publicShowHighlights}
+                  />
+                </label>
+              </div>
+            </div>
 
             <div className="text-xs text-muted-foreground">
-              Public profile URL: {username ? `/u/${username}` : "Set a username to generate a profile URL."}
+              Public profile URL:{" "}
+              <span className="font-mono text-foreground/90">
+                {username ? `/u/${username}` : "Set a username to generate a profile URL."}
+              </span>
             </div>
 
             <Button type="submit" disabled={socialPending}>
               {socialPending ? "Saving..." : "Save public profile settings"}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Connected sign-in providers</CardTitle>
+          <CardDescription>
+            Link social sign-in accounts to this profile so you can use any connected provider to log in.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {connectableProviders.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No external sign-in providers are enabled on this instance.</p>
+          ) : (
+            connectableProviders.map((provider) => {
+              const connected = connectedProviderIds.has(provider.id)
+              const linkingThisProvider = linkingProviderId === provider.id
+
+              return (
+                <div
+                  key={`${provider.kind}:${provider.id}`}
+                  className="flex items-center justify-between gap-3 rounded-md border border-border/70 p-3"
+                >
+                  <div>
+                    <p className="text-sm font-medium">{provider.label}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {connected ? "Connected" : "Not connected"}
+                    </p>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant={connected ? "secondary" : "outline"}
+                    disabled={connected || Boolean(linkingProviderId)}
+                    onClick={() => {
+                      if (provider.kind === "social") {
+                        void handleProviderLink(provider.id)
+                        return
+                      }
+                      void handleOauthProviderLink(provider.id)
+                    }}
+                  >
+                    {connected ? "Connected" : linkingThisProvider ? "Opening..." : "Connect"}
+                  </Button>
+                </div>
+              )
+            })
+          )}
         </CardContent>
       </Card>
 

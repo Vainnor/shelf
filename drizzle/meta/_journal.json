@@ -50,6 +50,13 @@
       "when": 1776402000000,
       "tag": "0006_book_highlights",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776408600000,
+      "tag": "0007_public_profile_polish",
+      "breakpoints": true
     }
   ]
 }

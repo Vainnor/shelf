@@ -1,14 +1,38 @@
 import { ArrowLeft } from "lucide-react"
+import { eq } from "drizzle-orm"
 import Link from "next/link"
 
 import SettingsPanel from "@/src/components/settings/settings-panel"
 import { Badge } from "@/src/components/ui/badge"
 import { buttonVariants } from "@/src/components/ui/button"
+import { db } from "@/src/db"
+import { accountsTable } from "@/src/db/schema/user"
 import { requireAuthenticatedUser } from "@/src/lib/admin"
+import { getEnabledAuthProviders } from "@/src/lib/auth-providers"
 import { cn } from "@/src/lib/utils"
 
 export default async function SettingsPage() {
   const { session, user } = await requireAuthenticatedUser()
+  const providers = getEnabledAuthProviders()
+  const linkedAccounts = await db.query.account.findMany({
+    where: eq(accountsTable.userId, user.id),
+  })
+  const linkedProviderIds = Array.from(new Set(linkedAccounts.map((account) => account.providerId)))
+  const settingsPanelProps: any = {
+    initialName: user.name ?? "",
+    initialEmail: user.email,
+    initialUsername: user.username ?? "",
+    initialPublicProfileEnabled: user.publicProfileEnabled,
+    initialPublicShowHighlights: user.publicShowHighlights,
+    initialPublicHighlightsLimit: user.publicHighlightsLimit,
+    initialReadingReminderEnabled: user.readingReminderEnabled,
+    initialReadingReminderChannel: user.readingReminderChannel,
+    initialReadingReminderDays: user.readingReminderDays,
+    availableAuthProviders: providers,
+    linkedProviderIds,
+    userId: user.id,
+    role: user.role,
+  }
 
   return (
     <main className="min-h-svh bg-background p-6 lg:p-10">
@@ -29,17 +53,7 @@ export default async function SettingsPage() {
           </Link>
         </div>
 
-        <SettingsPanel
-          initialName={user.name ?? ""}
-          initialEmail={user.email}
-          initialUsername={user.username ?? ""}
-          initialPublicProfileEnabled={user.publicProfileEnabled}
-          initialReadingReminderEnabled={user.readingReminderEnabled}
-          initialReadingReminderChannel={user.readingReminderChannel}
-          initialReadingReminderDays={user.readingReminderDays}
-          userId={user.id}
-          role={user.role}
-        />
+        <SettingsPanel {...settingsPanelProps} />
       </section>
     </main>
   )
