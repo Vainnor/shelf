@@ -16,6 +16,7 @@ import { usersTable } from "@/src/db/schema/user"
 import { writeAuditLog } from "@/src/lib/audit"
 import { getActiveSession } from "@/src/lib/session"
 import { canManageRole, requireClubMembership, requireClubRole } from "@/src/lib/clubs"
+import { createNotification } from "@/src/lib/notifications"
 
 type ClubRole = "owner" | "moderator" | "member"
 
@@ -282,6 +283,28 @@ export async function postClubDiscussion(
   })
 
   revalidatePath(`/clubs/${clubId}`)
+
+  if (input.isAnnouncement) {
+    const recipients = await db.query.bookClubMembers.findMany({
+      where: eq(bookClubMembersTable.clubId, clubId),
+      columns: { userId: true },
+    })
+
+    await Promise.all(
+      recipients
+        .filter((member) => member.userId !== session.user.id)
+        .map((member) =>
+          createNotification({
+            userId: member.userId,
+            type: "club.announcement",
+            title: "New club announcement",
+            body: trimmedTitle,
+            href: `/clubs/${clubId}/posts`,
+          })
+        )
+    )
+  }
+
   return post
 }
 
@@ -427,6 +450,15 @@ export async function inviteUserToClub(input: { clubId: string; username: string
   })
 
   revalidatePath(`/clubs/${input.clubId}`)
+
+  await createNotification({
+    userId: target.id,
+    type: "club.invite",
+    title: "Book club invitation",
+    body: `You were invited to join a book club as ${desiredRole}.`,
+    href: "/social",
+  })
+
   return invite
 }
 
@@ -514,6 +546,14 @@ export async function respondToClubInvite(inviteId: string, accept: boolean) {
       targetId: invite.clubId,
       metadata: { inviteId, role: invite.role },
     })
+
+    await createNotification({
+      userId: invite.inviterUserId,
+      type: "club.invite_response",
+      title: "Invite accepted",
+      body: "A user accepted your book club invite.",
+      href: `/clubs/${invite.clubId}/members`,
+    })
   } else {
     await logClubActivity({
       clubId: invite.clubId,
@@ -528,6 +568,14 @@ export async function respondToClubInvite(inviteId: string, accept: boolean) {
       targetType: "club",
       targetId: invite.clubId,
       metadata: { inviteId },
+    })
+
+    await createNotification({
+      userId: invite.inviterUserId,
+      type: "club.invite_response",
+      title: "Invite declined",
+      body: "A user declined your book club invite.",
+      href: `/clubs/${invite.clubId}/members`,
     })
   }
 

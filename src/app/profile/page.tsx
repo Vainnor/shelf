@@ -2,6 +2,7 @@ import { ArrowLeft, CheckCircle2, Mail, UserRound } from "lucide-react"
 import Link from "next/link"
 
 import AvatarSettings from "@/src/components/profile/avatar-settings"
+import NotificationsButton from "@/src/components/notifications/notifications-button"
 import { Badge } from "@/src/components/ui/badge"
 import { buttonVariants } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
@@ -25,13 +26,16 @@ export default async function ProfilePage() {
             </p>
           </div>
 
-          <Link
-            href="/dashboard"
-            className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}
-          >
-            <ArrowLeft className="size-4" />
-            Back to dashboard
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/dashboard"
+              className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}
+            >
+              <ArrowLeft className="size-4" />
+              Back to dashboard
+            </Link>
+            <NotificationsButton />
+          </div>
         </div>
 
         <Card>

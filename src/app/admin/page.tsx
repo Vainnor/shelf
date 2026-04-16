@@ -8,6 +8,7 @@ import {
   setSignupsEnabledByAdmin,
   toggleUserDisabledByAdmin,
 } from "@/src/actions/admin-users"
+import NotificationsButton from "@/src/components/notifications/notifications-button"
 import { Badge } from "@/src/components/ui/badge"
 import { buttonVariants } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
@@ -44,13 +45,16 @@ export default async function AdminPage() {
             <p className="text-muted-foreground">Manage users, account access, and signup policy.</p>
           </div>
 
-          <Link
-            href="/dashboard"
-            className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}
-          >
-            <ArrowLeft className="size-4" />
-            Back to dashboard
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/dashboard"
+              className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}
+            >
+              <ArrowLeft className="size-4" />
+              Back to dashboard
+            </Link>
+            <NotificationsButton />
+          </div>
         </div>
 
         <Card>

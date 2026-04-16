@@ -24,6 +24,7 @@ import {
 } from "@/src/actions/books"
 import { getSession } from "@/src/actions/auth"
 import ProfileMenu from "@/src/components/auth/profile-menu"
+import NotificationsButton from "@/src/components/notifications/notifications-button"
 
 export const dynamic = "force-dynamic"
 
@@ -360,18 +361,21 @@ export default function BookDetailPage() {
     <main className="min-h-svh bg-background p-6 lg:p-10">
       <section className="mx-auto w-full max-w-4xl space-y-6">
         {/* Header with navigation */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <Button variant="outline" onClick={() => router.back()} className="gap-2">
             <ArrowLeft className="size-4" />
             Back
           </Button>
-          <ProfileMenu
-            name={session?.user?.name ?? ""}
-            email={session?.user?.email ?? ""}
-            image={session?.user?.image}
-            isAdmin={session?.user?.role === "admin"}
-            username={session?.user?.username}
-          />
+          <div className="flex items-center gap-2">
+            <NotificationsButton />
+            <ProfileMenu
+              name={session?.user?.name ?? ""}
+              email={session?.user?.email ?? ""}
+              image={session?.user?.image}
+              isAdmin={session?.user?.role === "admin"}
+              username={session?.user?.username}
+            />
+          </div>
         </div>
 
         {/* Main content */}

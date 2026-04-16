@@ -4,6 +4,7 @@ import Link from "next/link"
 import { requireAuthenticatedUser } from "@/src/lib/admin"
 import { requireClubMembership } from "@/src/lib/clubs"
 import ProfileMenu from "@/src/components/auth/profile-menu"
+import NotificationsButton from "@/src/components/notifications/notifications-button"
 import ClubNav from "@/src/components/clubs/club-nav"
 import { Badge } from "@/src/components/ui/badge"
 import { buttonVariants } from "@/src/components/ui/button"
@@ -39,6 +40,7 @@ export default async function ClubLayout({
               <ArrowLeft className="size-4" />
               Social
             </Link>
+            <NotificationsButton />
             <ProfileMenu
               name={session.user.name ?? ""}
               email={session.user.email ?? ""}

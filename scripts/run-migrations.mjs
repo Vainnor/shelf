@@ -16,6 +16,7 @@ const requiredSchemaChecks = [
   { kind: "column", table: "users", column: "reading_reminder_days" },
   { kind: "column", table: "users", column: "public_show_highlights" },
   { kind: "column", table: "users", column: "public_highlights_limit" },
+  { kind: "column", table: "notifications", column: "id" },
 ]
 
 async function hasRelation(client, relationName) {

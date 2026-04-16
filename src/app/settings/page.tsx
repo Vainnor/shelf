@@ -2,7 +2,8 @@ import { ArrowLeft } from "lucide-react"
 import { eq } from "drizzle-orm"
 import Link from "next/link"
 
-import SettingsPanel from "@/src/components/settings/settings-panel"
+import SettingsPanel, { type SettingsPanelProps } from "@/src/components/settings/settings-panel"
+import NotificationsButton from "@/src/components/notifications/notifications-button"
 import { Badge } from "@/src/components/ui/badge"
 import { buttonVariants } from "@/src/components/ui/button"
 import { db } from "@/src/db"
@@ -18,7 +19,7 @@ export default async function SettingsPage() {
     where: eq(accountsTable.userId, user.id),
   })
   const linkedProviderIds = Array.from(new Set(linkedAccounts.map((account) => account.providerId)))
-  const settingsPanelProps: any = {
+  const settingsPanelProps: SettingsPanelProps = {
     initialName: user.name ?? "",
     initialEmail: user.email,
     initialUsername: user.username ?? "",
@@ -44,13 +45,16 @@ export default async function SettingsPage() {
             <p className="text-muted-foreground">Manage your account settings for {session.user.email}.</p>
           </div>
 
-          <Link
-            href="/dashboard"
-            className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}
-          >
-            <ArrowLeft className="size-4" />
-            Back to dashboard
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/dashboard"
+              className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}
+            >
+              <ArrowLeft className="size-4" />
+              Back to dashboard
+            </Link>
+            <NotificationsButton />
+          </div>
         </div>
 
         <SettingsPanel {...settingsPanelProps} />

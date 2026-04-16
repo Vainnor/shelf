@@ -21,7 +21,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src
 import { Input } from "@/src/components/ui/input"
 import type { UserRole } from "@/src/db/schema/user"
 
-type SettingsPanelProps = {
+export type SettingsPanelProps = {
   initialName: string
   initialEmail: string
   initialUsername: string
@@ -35,7 +35,6 @@ type SettingsPanelProps = {
   linkedProviderIds: string[]
   userId: string
   role: UserRole
-  [key: string]: unknown
 }
 
 const initialSettingsActionState: SettingsActionState = {

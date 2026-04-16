@@ -14,6 +14,7 @@ import {
 } from "@/src/db/schema/reading"
 import { usersTable } from "@/src/db/schema/user"
 import { writeAuditLog } from "@/src/lib/audit"
+import { createNotification } from "@/src/lib/notifications"
 import { getActiveSession } from "@/src/lib/session"
 
 function normalizeUsername(value: string) {
@@ -208,7 +209,7 @@ export async function followUserByUsername(rawUsername: string) {
     throw new Error("You cannot follow yourself")
   }
 
-  await db
+  const [createdFollow] = await db
     .insert(followsTable)
     .values({
       id: crypto.randomUUID(),
@@ -216,6 +217,17 @@ export async function followUserByUsername(rawUsername: string) {
       followingId: target.id,
     })
     .onConflictDoNothing({ target: [followsTable.followerId, followsTable.followingId] })
+    .returning({ id: followsTable.id })
+
+  if (createdFollow) {
+    await createNotification({
+      userId: target.id,
+      type: "social.follow",
+      title: "New follower",
+      body: `${session.user.name || session.user.email} started following you.`,
+      href: `/u/${target.username}`,
+    })
+  }
 
   await writeAuditLog({
     actorUserId: session.user.id,

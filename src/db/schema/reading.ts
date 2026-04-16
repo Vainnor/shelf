@@ -139,6 +139,32 @@ export const followsTable = pgTable(
   })
 )
 
+export const notificationsTable = pgTable(
+  "notifications",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    type: text("type").notNull().default("info"),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    href: text("href"),
+    isRead: boolean("is_read").notNull().default(false),
+    readAt: timestamp("read_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userReadCreatedIdx: index("notifications_user_read_created_idx").on(
+      table.userId,
+      table.isRead,
+      table.createdAt
+    ),
+    userCreatedIdx: index("notifications_user_created_idx").on(table.userId, table.createdAt),
+  })
+)
+
 export const bookClubsTable = pgTable(
   "book_clubs",
   {

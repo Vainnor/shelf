@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
 import ProfileMenu from "@/src/components/auth/profile-menu"
+import NotificationsButton from "@/src/components/notifications/notifications-button"
 import { Badge } from "@/src/components/ui/badge"
 import { Button } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
@@ -254,6 +255,7 @@ export default function DashboardPage() {
               <BookOpen className="size-4" />
               <span className="hidden sm:inline">Library</span>
             </Button>
+            <NotificationsButton />
             <ProfileMenu
               name={session?.user?.name ?? ""}
               email={session?.user?.email ?? ""}

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
 import ProfileMenu from "@/src/components/auth/profile-menu"
+import NotificationsButton from "@/src/components/notifications/notifications-button"
 import { Badge } from "@/src/components/ui/badge"
 import { buttonVariants } from "@/src/components/ui/button"
 import { Card, CardContent } from "@/src/components/ui/card"
@@ -130,6 +131,7 @@ export default function LibraryPage() {
               <span className="hidden sm:inline">Back to dashboard</span>
               <span className="sm:hidden">Dashboard</span>
             </Link>
+            <NotificationsButton />
             <ProfileMenu
               name={session?.user?.name ?? ""}
               email={session?.user?.email ?? ""}
