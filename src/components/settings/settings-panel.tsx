@@ -8,6 +8,7 @@ import {
   deleteCurrentUserAccount,
   exportCurrentUserData,
   sendCurrentUserPasswordReset,
+  updateReadingReminderSettings,
   updateCurrentUserSettings,
 } from "@/src/actions/settings"
 import { updatePublicProfileSettings } from "@/src/actions/social"
@@ -23,6 +24,9 @@ type SettingsPanelProps = {
   initialEmail: string
   initialUsername: string
   initialPublicProfileEnabled: boolean
+  initialReadingReminderEnabled: boolean
+  initialReadingReminderChannel: string
+  initialReadingReminderDays: number
   userId: string
   role: UserRole
 }
@@ -37,6 +41,9 @@ export default function SettingsPanel({
   initialEmail,
   initialUsername,
   initialPublicProfileEnabled,
+  initialReadingReminderEnabled,
+  initialReadingReminderChannel,
+  initialReadingReminderDays,
   userId,
   role,
 }: SettingsPanelProps) {
@@ -56,11 +63,18 @@ export default function SettingsPanel({
     deleteCurrentUserAccount,
     initialSettingsActionState
   )
+  const [reminderState, reminderAction, reminderPending] = useActionState(
+    updateReadingReminderSettings,
+    initialSettingsActionState
+  )
 
   const [name, setName] = useState(initialName)
   const [email, setEmail] = useState(initialEmail)
   const [username, setUsername] = useState(initialUsername)
   const [publicProfileEnabled, setPublicProfileEnabled] = useState(initialPublicProfileEnabled)
+  const [readingReminderEnabled, setReadingReminderEnabled] = useState(initialReadingReminderEnabled)
+  const [readingReminderChannel, setReadingReminderChannel] = useState(initialReadingReminderChannel)
+  const [readingReminderDays, setReadingReminderDays] = useState(String(initialReadingReminderDays))
   const [socialPending, setSocialPending] = useState(false)
   const [confirmText, setConfirmText] = useState("")
 
@@ -129,6 +143,19 @@ export default function SettingsPanel({
     }
   }, [deleteState.deleted, deleteState.ok])
 
+  useEffect(() => {
+    if (!reminderState.message) {
+      return
+    }
+
+    if (reminderState.ok) {
+      toast.success(reminderState.message)
+      return
+    }
+
+    toast.error(reminderState.message)
+  }, [reminderState])
+
   async function handleSocialSettingsSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSocialPending(true)
@@ -186,6 +213,64 @@ export default function SettingsPanel({
                 {profilePending ? "Saving..." : "Save changes"}
               </Button>
             </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Reading reminders</CardTitle>
+          <CardDescription>
+            Get notified when books in your reading shelf have not been updated for a while.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action={reminderAction} className="space-y-3">
+            <input type="hidden" name="readingReminderEnabled" value={readingReminderEnabled ? "true" : "false"} />
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={readingReminderEnabled}
+                onChange={(event) => setReadingReminderEnabled(event.target.checked)}
+                disabled={reminderPending}
+                className="size-4"
+              />
+              Enable reading reminders
+            </label>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="space-y-1 text-sm">
+                <span className="font-medium">Channel</span>
+                <select
+                  name="readingReminderChannel"
+                  value={readingReminderChannel}
+                  onChange={(event) => setReadingReminderChannel(event.target.value)}
+                  disabled={reminderPending || !readingReminderEnabled}
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                >
+                  <option value="email">Email</option>
+                  <option value="push">Push</option>
+                </select>
+              </label>
+
+              <label className="space-y-1 text-sm">
+                <span className="font-medium">Notify after inactivity (days)</span>
+                <Input
+                  name="readingReminderDays"
+                  type="number"
+                  min={1}
+                  max={60}
+                  step={1}
+                  value={readingReminderDays}
+                  onChange={(event) => setReadingReminderDays(event.target.value)}
+                  disabled={reminderPending || !readingReminderEnabled}
+                />
+              </label>
+            </div>
+
+            <Button type="submit" disabled={reminderPending}>
+              {reminderPending ? "Saving..." : "Save reminder settings"}
+            </Button>
           </form>
         </CardContent>
       </Card>

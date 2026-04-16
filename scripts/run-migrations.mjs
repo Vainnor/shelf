@@ -11,6 +11,9 @@ const requiredSchemaChecks = [
   { kind: "column", table: "book_club_posts", column: "is_announcement" },
   { kind: "column", table: "book_club_posts", column: "updated_at" },
   { kind: "column", table: "book_club_posts", column: "edited_at" },
+  { kind: "column", table: "users", column: "reading_reminder_enabled" },
+  { kind: "column", table: "users", column: "reading_reminder_channel" },
+  { kind: "column", table: "users", column: "reading_reminder_days" },
 ]
 
 async function hasRelation(client, relationName) {

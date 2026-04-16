@@ -5,11 +5,13 @@ import { sql } from "drizzle-orm"
 import { ArrowLeft, HeartPulse } from "lucide-react"
 import Link from "next/link"
 
+import EmailDiagnosticsCard from "@/src/components/admin/email-diagnostics-card"
 import { Badge } from "@/src/components/ui/badge"
 import { buttonVariants } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { db } from "@/src/db"
 import { requireAdminUser } from "@/src/lib/admin"
+import { getEmailDiagnostics } from "@/src/lib/email"
 import { cn } from "@/src/lib/utils"
 
 export const dynamic = "force-dynamic"
@@ -54,8 +56,29 @@ async function userRoleEnumIncludes(values: string[]) {
   return values.every((value) => labels.has(value))
 }
 
+async function hasUserReminderColumns() {
+  const result = await db.execute(sql`
+    select column_name
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'users'
+      and column_name in ('reading_reminder_enabled', 'reading_reminder_channel', 'reading_reminder_days')
+  `)
+
+  const found = new Set(
+    result.rows.map((row) => String((row as { column_name: string }).column_name))
+  )
+
+  return (
+    found.has("reading_reminder_enabled") &&
+    found.has("reading_reminder_channel") &&
+    found.has("reading_reminder_days")
+  )
+}
+
 export default async function AdminHealthPage() {
-  await requireAdminUser()
+  const { user: adminUser } = await requireAdminUser()
+  const emailDiagnostics = getEmailDiagnostics()
 
   const checkedAt = new Date()
 
@@ -80,11 +103,12 @@ export default async function AdminHealthPage() {
 
     if (appliedCount === null) {
       migrationTableMissing = true
-      const [auditLogsReady, rolesReady] = await Promise.all([
+      const [auditLogsReady, rolesReady, reminderColumnsReady] = await Promise.all([
         hasAuditLogsTable(),
         userRoleEnumIncludes(["editor", "moderator"]),
+        hasUserReminderColumns(),
       ])
-      fallbackSchemaLooksCurrent = auditLogsReady && rolesReady
+      fallbackSchemaLooksCurrent = auditLogsReady && rolesReady && reminderColumnsReady
       appliedMigrations = fallbackSchemaLooksCurrent ? expectedMigrations : 0
       migrationsMessage = fallbackSchemaLooksCurrent
         ? "Migration history table not found, but schema looks current (likely provisioned via drizzle push)."
@@ -152,6 +176,8 @@ export default async function AdminHealthPage() {
             </CardContent>
           </Card>
         </div>
+
+        <EmailDiagnosticsCard diagnostics={emailDiagnostics} adminEmail={adminUser.email} />
 
         <Card>
           <CardHeader>

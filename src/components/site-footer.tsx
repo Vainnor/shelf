@@ -1,0 +1,31 @@
+import Link from "next/link"
+
+export default function SiteFooter() {
+  return (
+    <footer className="border-t border-border/70 bg-background/90">
+      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-6 py-3 text-xs text-muted-foreground">
+        <span>Shelf</span>
+        <nav className="flex items-center gap-4">
+          <Link href="/privacy" className="hover:text-foreground">
+            Privacy
+          </Link>
+          <Link href="/terms" className="hover:text-foreground">
+            Terms
+          </Link>
+          <Link href="/docs" className="hover:text-foreground">
+            Docs
+          </Link>
+          <a
+            href="https://github.com/Vainnor/shelf"
+            target="_blank"
+            rel="noreferrer"
+            className="hover:text-foreground"
+          >
+            GitHub
+          </a>
+        </nav>
+      </div>
+    </footer>
+  )
+}
+

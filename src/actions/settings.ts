@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache"
 import { auth } from "@/src/lib/auth"
 import { db } from "@/src/db"
 import { booksTable } from "@/src/db/schema/book"
-import { usersTable } from "@/src/db/schema/user"
+import { reminderChannels, usersTable } from "@/src/db/schema/user"
 import { requireAuthenticatedUser } from "@/src/lib/admin"
 
 export type SettingsActionState = {
@@ -68,17 +68,61 @@ export async function sendCurrentUserPasswordReset(
     await auth.api.requestPasswordReset({
       body: {
         email: user.email,
-        redirectTo: "/login",
+        redirectTo: "/reset-password",
       },
     })
 
     return {
       ok: true,
-      message: "Password reset email sent. Check your inbox.",
+      message: "If your email is configured correctly, a password reset link will arrive shortly.",
     }
   } catch (error) {
     console.error("Error sending current user password reset:", error)
     return { ok: false, message: "Failed to send password reset email." }
+  }
+}
+
+export async function updateReadingReminderSettings(
+  _prevState: SettingsActionState,
+  formData: FormData
+): Promise<SettingsActionState> {
+  try {
+    void _prevState
+    const { user } = await requireAuthenticatedUser()
+    const enabled = String(formData.get("readingReminderEnabled") ?? "false") === "true"
+    const channel = String(formData.get("readingReminderChannel") ?? "email").trim().toLowerCase()
+    const days = Number(formData.get("readingReminderDays") ?? 7)
+
+    if (!reminderChannels.includes(channel as (typeof reminderChannels)[number])) {
+      return { ok: false, message: "Reminder channel must be email or push." }
+    }
+
+    if (!Number.isInteger(days) || days < 1 || days > 60) {
+      return { ok: false, message: "Reminder days must be a whole number between 1 and 60." }
+    }
+
+    await db
+      .update(usersTable)
+      .set({
+        readingReminderEnabled: enabled,
+        readingReminderChannel: channel,
+        readingReminderDays: days,
+        updatedAt: new Date(),
+      })
+      .where(eq(usersTable.id, user.id))
+
+    revalidatePath("/settings")
+    revalidatePath("/dashboard")
+
+    return {
+      ok: true,
+      message: enabled
+        ? `Reading reminders enabled (${channel}) after ${days} day(s) inactive.`
+        : "Reading reminders disabled.",
+    }
+  } catch (error) {
+    console.error("Error updating reading reminder settings:", error)
+    return { ok: false, message: "Failed to update reading reminders." }
   }
 }
 
@@ -101,6 +145,9 @@ export async function exportCurrentUserData(
         name: user.name,
         email: user.email,
         role: user.role,
+        readingReminderEnabled: user.readingReminderEnabled,
+        readingReminderChannel: user.readingReminderChannel,
+        readingReminderDays: user.readingReminderDays,
         emailVerified: user.emailVerified,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,

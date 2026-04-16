@@ -9,6 +9,7 @@ import {
   getCustomOAuthProvidersConfig,
   getEnabledSocialProvidersConfig,
 } from "@/src/lib/auth-providers"
+import { sendPasswordResetEmail } from "@/src/lib/email"
 
 const socialProviders = getEnabledSocialProvidersConfig()
 const customOAuthProviders = getCustomOAuthProvidersConfig()
@@ -18,6 +19,14 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET ?? "shelf-development-secret-change-me",
   emailAndPassword: {
     enabled: true,
+    resetPasswordTokenExpiresIn: 60 * 60,
+    sendResetPassword: async ({ user, url }) => {
+      await sendPasswordResetEmail({
+        to: user.email,
+        name: user.name ?? user.email,
+        resetUrl: url,
+      })
+    },
   },
   database: drizzleAdapter(db, {
     provider: "pg",

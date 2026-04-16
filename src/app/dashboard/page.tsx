@@ -1,6 +1,6 @@
 "use client"
 
-import { BookOpen, Plus, X } from "lucide-react"
+import { BellRing, BookOpen, Plus, Sparkles, X } from "lucide-react"
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -20,6 +20,8 @@ import {
   changeBookStatus,
   removeBook,
   getBestBooksThisYear,
+  getBookRecommendations,
+  getReadingReminders,
   getWeeklyInsights,
 } from "@/src/actions/books"
 import { getSession } from "@/src/actions/auth"
@@ -38,6 +40,8 @@ type Session = {
   }
 } | null
 type WeeklyInsights = Awaited<ReturnType<typeof getWeeklyInsights>> | null
+type ReadingReminders = Awaited<ReturnType<typeof getReadingReminders>> | null
+type BookRecommendations = Awaited<ReturnType<typeof getBookRecommendations>>
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -59,6 +63,8 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [weeklyInsights, setWeeklyInsights] = useState<WeeklyInsights>(null)
   const [bestBooks, setBestBooks] = useState<Book[]>([])
+  const [readingReminders, setReadingReminders] = useState<ReadingReminders>(null)
+  const [recommendations, setRecommendations] = useState<BookRecommendations>([])
 
   const displayName = session?.user?.name ?? session?.user?.email ?? "Guest"
 
@@ -109,9 +115,16 @@ export default function DashboardPage() {
 
   const fetchDashboardInsights = useCallback(async () => {
     try {
-      const [insights, topBooks] = await Promise.all([getWeeklyInsights(), getBestBooksThisYear(5)])
+      const [insights, topBooks, reminderData, recommendationData] = await Promise.all([
+        getWeeklyInsights(),
+        getBestBooksThisYear(5),
+        getReadingReminders(6),
+        getBookRecommendations(6),
+      ])
       setWeeklyInsights(insights)
       setBestBooks(topBooks)
+      setReadingReminders(reminderData)
+      setRecommendations(recommendationData)
     } catch (error) {
       console.error("Error fetching dashboard insights:", error)
     }
@@ -395,6 +408,66 @@ export default function DashboardPage() {
                       {book.title}
                     </button>
                     <span className="font-medium">{book.rating ?? "-"}/5</span>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BellRing className="size-4" />
+                Reading reminders
+              </CardTitle>
+              <CardDescription>
+                {readingReminders?.enabled
+                  ? `Books in reading not updated for ${readingReminders.days} day(s).`
+                  : "Reminders are disabled in settings."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {readingReminders?.enabled ? (
+                readingReminders.reminders.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No inactive reading books right now.</p>
+                ) : (
+                  readingReminders.reminders.map((reminder) => (
+                    <div
+                      key={reminder.id}
+                      className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2 text-sm"
+                    >
+                      <button className="text-left hover:underline" onClick={() => router.push(`/books/${reminder.id}`)}>
+                        {reminder.title}
+                      </button>
+                      <span className="text-xs text-muted-foreground">{reminder.daysInactive} day(s) inactive</span>
+                    </div>
+                  ))
+                )
+              ) : (
+                <Button variant="outline" onClick={() => router.push("/settings")}>Enable reminders</Button>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="size-4" />
+                Similar recommendations
+              </CardTitle>
+              <CardDescription>Based on authors from books you finished.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {recommendations.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Finish more books to unlock recommendations.</p>
+              ) : (
+                recommendations.map((item) => (
+                  <div key={`${item.title}-${item.author}`} className="rounded-md border border-border/70 px-3 py-2 text-sm">
+                    <p className="font-medium">{item.title}</p>
+                    <p className="text-xs text-muted-foreground">{item.author}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{item.reason}</p>
                   </div>
                 ))
               )}

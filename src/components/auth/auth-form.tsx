@@ -137,6 +137,13 @@ export default function AuthForm({ mode, providers, allowSignupLink = true }: Au
           <Button type="submit" className="w-full" disabled={isPending}>
             {mode === "signup" ? "Sign up with email" : "Log in with email"}
           </Button>
+          {mode === "login" ? (
+            <p className="text-right text-sm text-muted-foreground">
+              <Link href="/forgot-password" className="underline underline-offset-4">
+                Forgot password?
+              </Link>
+            </p>
+          ) : null}
         </form>
 
         {providers.length > 0 ? (
@@ -169,6 +176,12 @@ export default function AuthForm({ mode, providers, allowSignupLink = true }: Au
           ) : (
             <span className="text-foreground">Signups are disabled</span>
           )}
+        </p>
+
+        <p className="text-xs text-muted-foreground">
+          <Link href="/privacy" className="underline underline-offset-4">
+            Privacy policy
+          </Link>
         </p>
       </CardContent>
     </Card>
