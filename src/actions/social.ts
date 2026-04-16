@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache"
 import { db } from "@/src/db"
 import { booksTable } from "@/src/db/schema/book"
 import {
+  bookClubActivityTable,
   bookClubMembersTable,
   bookClubsTable,
   followsTable,
@@ -289,6 +290,14 @@ export async function createBookClub(input: { name: string; description?: string
     })
     .onConflictDoNothing({ target: [bookClubMembersTable.clubId, bookClubMembersTable.userId] })
 
+  await db.insert(bookClubActivityTable).values({
+    id: crypto.randomUUID(),
+    clubId: club.id,
+    actorUserId: session.user.id,
+    activityType: "club_created",
+    details: `Created club ${club.name}`,
+  })
+
   revalidatePath("/social")
 
   return club
@@ -316,6 +325,13 @@ export async function joinBookClub(clubId: string) {
     })
     .onConflictDoNothing({ target: [bookClubMembersTable.clubId, bookClubMembersTable.userId] })
 
+  await db.insert(bookClubActivityTable).values({
+    id: crypto.randomUUID(),
+    clubId,
+    actorUserId: session.user.id,
+    activityType: "member_joined",
+  })
+
   revalidatePath("/social")
 
   return { ok: true }
@@ -339,6 +355,13 @@ export async function leaveBookClub(clubId: string) {
   await db
     .delete(bookClubMembersTable)
     .where(and(eq(bookClubMembersTable.clubId, clubId), eq(bookClubMembersTable.userId, session.user.id)))
+
+  await db.insert(bookClubActivityTable).values({
+    id: crypto.randomUUID(),
+    clubId,
+    actorUserId: session.user.id,
+    activityType: "member_left",
+  })
 
   revalidatePath("/social")
 

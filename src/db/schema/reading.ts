@@ -22,6 +22,27 @@ export const progressEventTypes = [
 
 export const progressEventTypeEnum = pgEnum("progress_event_type", progressEventTypes)
 export const bookClubRoleEnum = pgEnum("book_club_role", ["owner", "moderator", "member"])
+export const bookClubInviteStatusEnum = pgEnum("book_club_invite_status", [
+  "pending",
+  "accepted",
+  "declined",
+  "revoked",
+])
+export const clubShelfStatusEnum = pgEnum("club_shelf_status", ["to_read", "reading", "read"])
+export const bookClubActivityTypeEnum = pgEnum("book_club_activity_type", [
+  "club_created",
+  "member_joined",
+  "member_left",
+  "invite_sent",
+  "invite_accepted",
+  "invite_declined",
+  "invite_revoked",
+  "member_role_changed",
+  "member_removed",
+  "book_added",
+  "book_removed",
+  "discussion_posted",
+])
 
 export const tagsTable = pgTable(
   "tags",
@@ -153,6 +174,102 @@ export const bookClubMembersTable = pgTable(
   (table) => ({
     uniqueClubMemberIdx: uniqueIndex("book_club_members_club_user_idx").on(table.clubId, table.userId),
     userIdx: index("book_club_members_user_idx").on(table.userId),
+  })
+)
+
+export const bookClubInvitesTable = pgTable(
+  "book_club_invites",
+  {
+    id: text("id").primaryKey(),
+    clubId: text("club_id")
+      .notNull()
+      .references(() => bookClubsTable.id, { onDelete: "cascade" }),
+    inviterUserId: text("inviter_user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    invitedUserId: text("invited_user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    role: bookClubRoleEnum("role").notNull().default("member"),
+    status: bookClubInviteStatusEnum("status").notNull().default("pending"),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => ({
+    pendingInviteIdx: uniqueIndex("book_club_invites_pending_idx").on(
+      table.clubId,
+      table.invitedUserId,
+      table.status
+    ),
+    invitedUserIdx: index("book_club_invites_invited_user_idx").on(table.invitedUserId),
+  })
+)
+
+export const bookClubBooksTable = pgTable(
+  "book_club_books",
+  {
+    id: text("id").primaryKey(),
+    clubId: text("club_id")
+      .notNull()
+      .references(() => bookClubsTable.id, { onDelete: "cascade" }),
+    addedByUserId: text("added_by_user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    author: text("author").notNull(),
+    coverUrl: text("cover_url"),
+    notes: text("notes"),
+    status: clubShelfStatusEnum("status").notNull().default("to_read"),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => ({
+    clubUpdatedIdx: index("book_club_books_club_updated_idx").on(table.clubId, table.updatedAt),
+  })
+)
+
+export const bookClubPostsTable = pgTable(
+  "book_club_posts",
+  {
+    id: text("id").primaryKey(),
+    clubId: text("club_id")
+      .notNull()
+      .references(() => bookClubsTable.id, { onDelete: "cascade" }),
+    authorUserId: text("author_user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    isAnnouncement: boolean("is_announcement").notNull().default(false),
+    updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+    editedAt: timestamp("edited_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => ({
+    clubCreatedIdx: index("book_club_posts_club_created_idx").on(table.clubId, table.createdAt),
+    clubAnnouncementIdx: index("book_club_posts_club_announcement_idx").on(
+      table.clubId,
+      table.isAnnouncement
+    ),
+  })
+)
+
+export const bookClubActivityTable = pgTable(
+  "book_club_activity",
+  {
+    id: text("id").primaryKey(),
+    clubId: text("club_id")
+      .notNull()
+      .references(() => bookClubsTable.id, { onDelete: "cascade" }),
+    actorUserId: text("actor_user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    activityType: bookClubActivityTypeEnum("activity_type").notNull(),
+    details: text("details"),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => ({
+    clubCreatedIdx: index("book_club_activity_club_created_idx").on(table.clubId, table.createdAt),
   })
 )
 

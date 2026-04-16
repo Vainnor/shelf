@@ -22,7 +22,7 @@ CMD ["pnpm", "dev"]
 FROM deps AS migrator
 ENV NODE_ENV=development
 COPY . .
-CMD ["pnpm", "drizzle-kit", "push"]
+CMD ["node", "scripts/run-migrations.mjs"]
 
 FROM base AS builder
 ARG APP_VERSION

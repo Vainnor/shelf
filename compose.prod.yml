@@ -24,7 +24,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: pnpm drizzle-kit push
+    command: node scripts/run-migrations.mjs
 
   app:
     build:

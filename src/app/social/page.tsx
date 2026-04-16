@@ -15,6 +15,7 @@ import {
   leaveBookClub,
   unfollowUserByUsername,
 } from "@/src/actions/social"
+import { getMyPendingClubInvites, respondToClubInvite } from "@/src/actions/clubs"
 import ProfileMenu from "@/src/components/auth/profile-menu"
 import { Badge } from "@/src/components/ui/badge"
 import { Button, buttonVariants } from "@/src/components/ui/button"
@@ -35,6 +36,7 @@ type Session = {
 } | null
 
 type SocialData = Awaited<ReturnType<typeof getSocialHomeData>> | null
+type PendingInvites = Awaited<ReturnType<typeof getMyPendingClubInvites>>
 
 export default function SocialPage() {
   const router = useRouter()
@@ -46,11 +48,15 @@ export default function SocialPage() {
   const [creatingClub, setCreatingClub] = useState(false)
   const [pendingUser, setPendingUser] = useState<string | null>(null)
   const [pendingClub, setPendingClub] = useState<string | null>(null)
+  const [pendingInvites, setPendingInvites] = useState<PendingInvites>([])
+  const [pendingInviteAction, setPendingInviteAction] = useState<string | null>(null)
 
   async function refreshSocialData() {
     try {
       const socialData = await getSocialHomeData()
+      const invites = await getMyPendingClubInvites()
       setData(socialData)
+      setPendingInvites(invites)
     } catch (error) {
       console.error("Failed to load social data", error)
       toast.error("Failed to load social data")
@@ -135,6 +141,19 @@ export default function SocialPage() {
       toast.error(error instanceof Error ? error.message : "Failed to update membership")
     } finally {
       setPendingClub(null)
+    }
+  }
+
+  async function handleInviteResponse(inviteId: string, accept: boolean) {
+    setPendingInviteAction(inviteId)
+    try {
+      await respondToClubInvite(inviteId, accept)
+      toast.success(accept ? "Joined club" : "Declined invite")
+      await refreshSocialData()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to respond to invite")
+    } finally {
+      setPendingInviteAction(null)
     }
   }
 
@@ -317,22 +336,69 @@ export default function SocialPage() {
                 return (
                   <div key={club.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2">
                     <div>
-                      <p className="text-sm font-medium">{club.name}</p>
+                      <Link href={`/clubs/${club.id}`} className="text-sm font-medium hover:underline">
+                        {club.name}
+                      </Link>
                       <p className="text-xs text-muted-foreground">{club.description || "No description"}</p>
                     </div>
-                    <Button
-                      size="sm"
-                      variant={joined ? "outline" : "default"}
-                      disabled={pendingClub === club.id}
-                      onClick={() => void handleClubMembership(club.id, joined)}
-                    >
-                      {joined ? "Leave" : "Join"}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Link href={`/clubs/${club.id}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>
+                        Open
+                      </Link>
+                      <Button
+                        size="sm"
+                        variant={joined ? "outline" : "default"}
+                        disabled={pendingClub === club.id}
+                        onClick={() => void handleClubMembership(club.id, joined)}
+                      >
+                        {joined ? "Leave" : "Join"}
+                      </Button>
+                    </div>
                   </div>
                 )
               })
             ) : (
               <p className="text-sm text-muted-foreground">No clubs yet.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Pending invitations</CardTitle>
+            <CardDescription>Accept or decline invites from club moderators.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {pendingInvites.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No pending invites.</p>
+            ) : (
+              pendingInvites.map((invite) => (
+                <div key={invite.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium">{invite.club?.name ?? "Book club"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Invited by @{invite.inviter?.username ?? invite.inviter?.email ?? "unknown"} as {invite.role}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={pendingInviteAction === invite.id}
+                      onClick={() => void handleInviteResponse(invite.id, false)}
+                    >
+                      Decline
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={pendingInviteAction === invite.id}
+                      onClick={() => void handleInviteResponse(invite.id, true)}
+                    >
+                      Accept
+                    </Button>
+                  </div>
+                </div>
+              ))
             )}
           </CardContent>
         </Card>

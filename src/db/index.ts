@@ -9,9 +9,13 @@ import {
 } from "./schema/user"
 import { booksTable } from "./schema/book"
 import {
+  bookClubActivityTable,
+  bookClubBooksTable,
   bookClubMembersTable,
+  bookClubInvitesTable,
   bookClubsTable,
   bookProgressEventsTable,
+  bookClubPostsTable,
   bookTagsTable,
   collectionBooksTable,
   collectionsTable,
@@ -50,6 +54,10 @@ export const schema = {
   follows: followsTable,
   bookClubs: bookClubsTable,
   bookClubMembers: bookClubMembersTable,
+  bookClubInvites: bookClubInvitesTable,
+  bookClubBooks: bookClubBooksTable,
+  bookClubPosts: bookClubPostsTable,
+  bookClubActivity: bookClubActivityTable,
   sharedCollectionMembers: sharedCollectionMembersTable,
   readingGoals: readingGoalsTable,
   readingSessions: readingSessionsTable,
