@@ -29,6 +29,11 @@ export function BookForm({ book, onSubmit, onCancel, isLoading = false }: BookFo
           isbn: book.isbn,
           coverUrl: book.coverUrl,
           notes: book.notes,
+          rating: book.rating,
+          review: book.review,
+          isFavorite: book.isFavorite,
+          dailyPageGoal: book.dailyPageGoal,
+          targetFinishDate: book.targetFinishDate,
         }
       : {
           title: "",
@@ -39,6 +44,11 @@ export function BookForm({ book, onSubmit, onCancel, isLoading = false }: BookFo
           isbn: null,
           coverUrl: null,
           notes: null,
+          rating: null,
+          review: null,
+          isFavorite: false,
+          dailyPageGoal: null,
+          targetFinishDate: null,
         }
   )
   const [isLookupLoading, setIsLookupLoading] = useState(false)
@@ -51,11 +61,32 @@ export function BookForm({ book, onSubmit, onCancel, isLoading = false }: BookFo
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
+    if (name === "targetFinishDate") {
+      setFormData((prev) => ({
+        ...prev,
+        targetFinishDate: value ? new Date(`${value}T00:00:00`) : null,
+      }))
+      return
+    }
+
+    if (type === "checkbox") {
+      const checked = (e.target as HTMLInputElement).checked
+      setFormData((prev) => ({
+        ...prev,
+        [name]: checked,
+      }))
+      return
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: type === "number" ? (value ? parseInt(value) : null) : value === "" ? null : value,
     }))
   }
+
+  const targetFinishDateValue = formData.targetFinishDate
+    ? new Date(formData.targetFinishDate).toISOString().slice(0, 10)
+    : ""
 
   const handleLookupByIsbn = async () => {
     const isbn = formData.isbn?.trim()
@@ -199,6 +230,71 @@ export function BookForm({ book, onSubmit, onCancel, isLoading = false }: BookFo
               value={formData.notes || ""}
               onChange={handleChange}
               placeholder="Personal notes about the book"
+              disabled={isLoading}
+              rows={3}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Rating (1-5)</label>
+              <Input
+                name="rating"
+                type="number"
+                min={1}
+                max={5}
+                value={formData.rating || ""}
+                onChange={handleChange}
+                placeholder="5"
+                disabled={isLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Daily page goal</label>
+              <Input
+                name="dailyPageGoal"
+                type="number"
+                min={0}
+                value={formData.dailyPageGoal || ""}
+                onChange={handleChange}
+                placeholder="20"
+                disabled={isLoading}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Target finish date</label>
+              <Input
+                name="targetFinishDate"
+                type="date"
+                value={targetFinishDateValue}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm font-medium self-end pb-2">
+              <input
+                name="isFavorite"
+                type="checkbox"
+                checked={Boolean(formData.isFavorite)}
+                onChange={handleChange}
+                disabled={isLoading}
+                className="size-4 rounded border-border"
+              />
+              Mark as favorite
+            </label>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Short review</label>
+            <textarea
+              name="review"
+              value={formData.review || ""}
+              onChange={handleChange}
+              placeholder="What did you think of this book?"
               disabled={isLoading}
               rows={3}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"

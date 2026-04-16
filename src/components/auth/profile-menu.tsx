@@ -1,6 +1,6 @@
 "use client"
 
-import { BookOpen, ChevronDown, LayoutDashboard, LogOut, Settings, Shield, UserRound } from "lucide-react"
+import { BookOpen, ChevronDown, LayoutDashboard, LogOut, Settings, Shield, UserRound, Users } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
@@ -14,6 +14,7 @@ type ProfileMenuProps = {
   email: string | null | undefined
   image?: string | null
   isAdmin?: boolean
+  username?: string | null
 }
 
 function getInitials(name: string | null | undefined, email: string | null | undefined) {
@@ -31,7 +32,13 @@ function getInitials(name: string | null | undefined, email: string | null | und
   return `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase()
 }
 
-export default function ProfileMenu({ name, email, image, isAdmin = false }: ProfileMenuProps) {
+export default function ProfileMenu({
+  name,
+  email,
+  image,
+  isAdmin = false,
+  username,
+}: ProfileMenuProps) {
   const router = useRouter()
   const [isPending, startTransition] = React.useTransition()
   const [avatarError, setAvatarError] = React.useState(false)
@@ -100,6 +107,24 @@ export default function ProfileMenu({ name, email, image, isAdmin = false }: Pro
           <BookOpen className="size-4" />
           Library
         </Link>
+
+        <Link
+          href="/social"
+          className="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-muted"
+        >
+          <Users className="size-4" />
+          Social
+        </Link>
+
+        {username ? (
+          <Link
+            href={`/u/${username}`}
+            className="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-muted"
+          >
+            <Users className="size-4" />
+            Public profile
+          </Link>
+        ) : null}
 
         <Link
           href="/profile"

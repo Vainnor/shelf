@@ -8,6 +8,27 @@
       "when": 1776279425578,
       "tag": "0000_amused_mister_sinister",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776289000000,
+      "tag": "0001_social_graph",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776293000000,
+      "tag": "0002_club_details",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1776297000000,
+      "tag": "0003_club_posts_metadata",
+      "breakpoints": true
     }
   ]
 }
