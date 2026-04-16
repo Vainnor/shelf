@@ -15,9 +15,7 @@ services:
       retries: 10
 
   migrate:
-    build:
-      context: .
-      target: migrator
+    image: ghcr.io/vainnor/shelf:latest
     restart: "no"
     environment:
       DATABASE_URL: postgres://shelf:shelf@db:5432/shelf
@@ -27,12 +25,7 @@ services:
     command: node scripts/run-migrations.mjs
 
   app:
-    build:
-      context: .
-      target: runner
-      args:
-        APP_VERSION: ${APP_VERSION:-0.0.1}
-        GIT_SHA: ${GIT_SHA:-local}
+    image: ghcr.io/vainnor/shelf:latest
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -43,20 +36,8 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
-    expose:
-      - "3000"
-
-  caddy:
-    image: caddy:2.8-alpine
-    restart: unless-stopped
-    depends_on:
-      app:
-        condition: service_started
     ports:
-      - "80:80"
-    volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - "8888:3000"
 
 volumes:
   shelf-prod-postgres:
-

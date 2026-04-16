@@ -19,16 +19,19 @@ const shelves = [
   {
     title: "To read",
     description: "Capture books you discover and keep your next reads organized.",
+    note: "A clean queue for future reads.",
     accent: "bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/30",
   },
   {
     title: "Currently reading",
     description: "Track progress with pages, notes, and reading momentum.",
+    note: "Keep your active book front and center.",
     accent: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
   },
   {
     title: "Read",
     description: "Build a personal archive of completed books and reflections.",
+    note: "A finished library you can come back to later.",
     accent: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
   },
 ]
@@ -132,21 +135,25 @@ export default async function Page() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
-          {shelves.map((shelf) => (
+          {shelves.map((shelf, index) => (
             <Card
               key={shelf.title}
-              className="h-full border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+              className="group h-full border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
             >
-              <CardHeader>
-                <div className="flex items-center justify-between gap-3">
-                  <CardTitle>{shelf.title}</CardTitle>
-                  <Badge className={cn("border", shelf.accent)}>{shelf.title}</Badge>
+              <CardHeader className="space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-2">
+                    <Badge className={cn("border", shelf.accent)}>
+                      {String(index + 1).padStart(2, "0")}
+                    </Badge>
+                    <CardTitle className="text-xl tracking-tight">{shelf.title}</CardTitle>
+                  </div>
                 </div>
                 <CardDescription>{shelf.description}</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="rounded-lg border border-dashed border-border/70 p-4 text-sm text-muted-foreground">
-                  Built for fast organization and effortless status updates.
+              <CardContent className="pt-0">
+                <div className="rounded-xl border border-border/70 bg-muted/25 p-4 text-sm leading-6 text-muted-foreground transition-colors group-hover:bg-muted/35">
+                  {shelf.note}
                 </div>
               </CardContent>
             </Card>
