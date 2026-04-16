@@ -328,6 +328,35 @@ export const readingSessionsTable = pgTable(
   })
 )
 
+export const bookHighlightsTable = pgTable(
+  "book_highlights",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    bookId: text("book_id")
+      .notNull()
+      .references(() => booksTable.id, { onDelete: "cascade" }),
+    quote: text("quote").notNull(),
+    page: integer("page"),
+    highlightedAt: timestamp("highlighted_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userBookCreatedIdx: index("book_highlights_user_book_created_idx").on(
+      table.userId,
+      table.bookId,
+      table.createdAt
+    ),
+    bookHighlightedAtIdx: index("book_highlights_book_highlighted_at_idx").on(
+      table.bookId,
+      table.highlightedAt
+    ),
+  })
+)
+
 export const bookProgressEventsTable = pgTable(
   "book_progress_events",
   {
