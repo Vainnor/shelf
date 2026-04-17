@@ -13,10 +13,40 @@ import { cn } from "@/src/lib/utils"
 
 export const dynamic = "force-dynamic"
 
-export default async function AdminAuditPage() {
+type AuditPageProps = {
+  searchParams?: Promise<{
+    scope?: string
+    actor?: string
+    action?: string
+    from?: string
+    to?: string
+  }>
+}
+
+function parseOptionalDate(value?: string, endOfDay = false) {
+  if (!value) return undefined
+  const date = new Date(endOfDay ? `${value}T23:59:59.999` : `${value}T00:00:00.000`)
+  return Number.isNaN(date.getTime()) ? undefined : date
+}
+
+export default async function AdminAuditPage({ searchParams }: AuditPageProps) {
   await requireAdminUser()
 
-  const logs = await listAuditLogs({ limit: 150 })
+  const params = (await searchParams) ?? {}
+  const scope = params.scope === "admin" || params.scope === "social" || params.scope === "club" ? params.scope : undefined
+  const actor = params.actor?.trim() || undefined
+  const action = params.action?.trim() || undefined
+  const from = parseOptionalDate(params.from)
+  const to = parseOptionalDate(params.to, true)
+
+  const logs = await listAuditLogs({
+    scope,
+    actorUserId: actor,
+    actionQuery: action,
+    from,
+    to,
+    limit: 150,
+  })
   const actorIds = Array.from(new Set(logs.map((log) => log.actorUserId).filter(Boolean))) as string[]
   const actors = actorIds.length
     ? await db.query.user.findMany({ where: inArray(usersTable.id, actorIds) })
@@ -40,6 +70,40 @@ export default async function AdminAuditPage() {
             Back to admin
           </Link>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Filters</CardTitle>
+            <CardDescription>Narrow down logs by scope, actor, action, and time window.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="grid gap-2 md:grid-cols-5">
+              <select name="scope" defaultValue={scope ?? ""} className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm">
+                <option value="">All scopes</option>
+                <option value="admin">Admin</option>
+                <option value="social">Social</option>
+                <option value="club">Club</option>
+              </select>
+              <input
+                name="actor"
+                defaultValue={actor ?? ""}
+                placeholder="Actor user id"
+                className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+              />
+              <input
+                name="action"
+                defaultValue={action ?? ""}
+                placeholder="Action contains..."
+                className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+              />
+              <input name="from" type="date" defaultValue={params.from ?? ""} className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm" />
+              <div className="flex gap-2">
+                <input name="to" type="date" defaultValue={params.to ?? ""} className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm" />
+                <button type="submit" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9")}>Apply</button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

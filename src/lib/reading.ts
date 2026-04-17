@@ -12,6 +12,23 @@ import {
 
 export type ProgressEventType = (typeof progressEventTypes)[number]
 export type BookStatus = (typeof bookStatuses)[number]
+export type GoalCadence = "monthly" | "yearly"
+
+export type ReadingGoalsV2Input = {
+  pagesPerDay?: number
+  yearlyTarget?: number | null
+  monthlyTarget?: number | null
+  targetYear?: number | null
+  targetMonth?: number | null
+}
+
+export type ReadingGoalPace = {
+  cadence: GoalCadence
+  target: number
+  progress: number
+  expectedProgress: number
+  isOnTrack: boolean
+}
 
 export type ReadingSessionInput = {
   bookId: string
@@ -218,6 +235,75 @@ export async function setDailyPageGoal(userId: string, pagesPerDay: number) {
     .returning()
 
   return goal
+}
+
+export async function setReadingGoalsV2(userId: string, input: ReadingGoalsV2Input) {
+  if (input.pagesPerDay !== undefined && input.pagesPerDay < 0) {
+    throw new Error("Daily page goal cannot be negative")
+  }
+
+  if (input.yearlyTarget !== undefined && input.yearlyTarget !== null && input.yearlyTarget < 0) {
+    throw new Error("Yearly target cannot be negative")
+  }
+
+  if (input.monthlyTarget !== undefined && input.monthlyTarget !== null && input.monthlyTarget < 0) {
+    throw new Error("Monthly target cannot be negative")
+  }
+
+  const existingGoal = await db.query.readingGoals.findFirst({
+    where: eq(readingGoalsTable.userId, userId),
+  })
+
+  const [goal] = await db
+    .insert(readingGoalsTable)
+    .values({
+      id: crypto.randomUUID(),
+      userId,
+      pagesPerDay: input.pagesPerDay ?? existingGoal?.pagesPerDay ?? 0,
+      yearlyTarget: input.yearlyTarget ?? existingGoal?.yearlyTarget ?? null,
+      monthlyTarget: input.monthlyTarget ?? existingGoal?.monthlyTarget ?? null,
+      targetYear: input.targetYear ?? existingGoal?.targetYear ?? null,
+      targetMonth: input.targetMonth ?? existingGoal?.targetMonth ?? null,
+      pacingUpdatedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: readingGoalsTable.userId,
+      set: {
+        pagesPerDay: input.pagesPerDay ?? existingGoal?.pagesPerDay ?? 0,
+        yearlyTarget: input.yearlyTarget ?? existingGoal?.yearlyTarget ?? null,
+        monthlyTarget: input.monthlyTarget ?? existingGoal?.monthlyTarget ?? null,
+        targetYear: input.targetYear ?? existingGoal?.targetYear ?? null,
+        targetMonth: input.targetMonth ?? existingGoal?.targetMonth ?? null,
+        pacingUpdatedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    })
+    .returning()
+
+  return goal
+}
+
+export function computeGoalPace(input: {
+  cadence: GoalCadence
+  target: number
+  progress: number
+  elapsedDays: number
+  totalDays: number
+}): ReadingGoalPace {
+  const normalizedTarget = Math.max(0, input.target)
+  const normalizedProgress = Math.max(0, input.progress)
+  const normalizedElapsed = Math.max(0, Math.min(input.elapsedDays, input.totalDays))
+  const expectedProgress =
+    input.totalDays > 0 ? Math.floor((normalizedTarget * normalizedElapsed) / input.totalDays) : 0
+
+  return {
+    cadence: input.cadence,
+    target: normalizedTarget,
+    progress: normalizedProgress,
+    expectedProgress,
+    isOnTrack: normalizedProgress >= expectedProgress,
+  }
 }
 
 export async function getBookHighlights(userId: string, bookId: string, limit = 100) {

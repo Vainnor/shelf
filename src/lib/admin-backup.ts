@@ -22,10 +22,14 @@ const backupPayloadSchema = z.object({
 export type BackupPayload = z.infer<typeof backupPayloadSchema>
 
 export type ImportSummary = {
+  mode: "dry-run" | "apply"
   insertedRows: number
+  plannedRows: number
   tableCount: number
   tables: Array<{ table: string; rows: number }>
 }
+
+export type ImportMode = "dry-run" | "apply"
 
 function quoteIdentifier(identifier: string) {
   return `"${identifier.replaceAll('"', '""')}"`
@@ -152,7 +156,11 @@ export async function exportDatabaseAsJson() {
   }
 }
 
-export async function importDatabaseFromJson(input: unknown): Promise<ImportSummary> {
+export async function importDatabaseFromJson(
+  input: unknown,
+  options: { mode?: ImportMode } = {}
+): Promise<ImportSummary> {
+  const mode: ImportMode = options.mode ?? "apply"
   const parsed = backupPayloadSchema.safeParse(input)
   if (!parsed.success) {
     throw new Error("Invalid backup file format.")
@@ -175,17 +183,33 @@ export async function importDatabaseFromJson(input: unknown): Promise<ImportSumm
   const dependencies = await listForeignKeyDependencies(db)
   const insertOrder = sortTablesForInsert(currentTables, dependencies)
 
+  const tableSummaries: Array<{ table: string; rows: number }> = insertOrder.map((tableName) => ({
+    table: tableName,
+    rows: (payload.tables[tableName] ?? []).length,
+  }))
+  const plannedRows = tableSummaries.reduce((acc, item) => acc + item.rows, 0)
+
+  if (mode === "dry-run") {
+    return {
+      mode,
+      insertedRows: 0,
+      plannedRows,
+      tableCount: currentTables.length,
+      tables: tableSummaries,
+    }
+  }
+
   return db.transaction(async (tx) => {
     const truncateExpression = currentTables.map(toQualifiedTableExpression).join(", ")
     await tx.execute(sql.raw(`truncate table ${truncateExpression} restart identity cascade`))
 
     let insertedRows = 0
-    const tableSummaries: Array<{ table: string; rows: number }> = []
+    const appliedTableSummaries: Array<{ table: string; rows: number }> = []
 
     for (const tableName of insertOrder) {
       const rows = payload.tables[tableName] ?? []
       if (rows.length === 0) {
-        tableSummaries.push({ table: tableName, rows: 0 })
+        appliedTableSummaries.push({ table: tableName, rows: 0 })
         continue
       }
 
@@ -197,13 +221,15 @@ export async function importDatabaseFromJson(input: unknown): Promise<ImportSumm
       `)
 
       insertedRows += rows.length
-      tableSummaries.push({ table: tableName, rows: rows.length })
+      appliedTableSummaries.push({ table: tableName, rows: rows.length })
     }
 
     return {
+      mode,
       insertedRows,
+      plannedRows,
       tableCount: currentTables.length,
-      tables: tableSummaries,
+      tables: appliedTableSummaries,
     }
   })
 }

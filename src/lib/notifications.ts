@@ -3,12 +3,66 @@ import { and, desc, eq } from "drizzle-orm"
 import { db } from "@/src/db"
 import { notificationsTable } from "@/src/db/schema/reading"
 
+export const notificationKinds = [
+  "info",
+  "reading.reminder",
+  "recommendation.feedback",
+  "club.invite",
+  "club.announcement",
+  "club.reply",
+  "club.role_change",
+] as const
+
+export type NotificationKind = (typeof notificationKinds)[number]
+
+type BaseNotificationPayload = {
+  userId: string
+  href?: string | null
+}
+
+export type ReadingReminderNotificationPayload = BaseNotificationPayload & {
+  kind: "reading.reminder"
+  bookTitle: string
+  daysInactive: number
+}
+
+export type RecommendationFeedbackNotificationPayload = BaseNotificationPayload & {
+  kind: "recommendation.feedback"
+  recommendationTitle: string
+  feedbackType: "not_interested" | "already_read"
+}
+
+export type NotificationPayload =
+  | ReadingReminderNotificationPayload
+  | RecommendationFeedbackNotificationPayload
+
 export type CreateNotificationInput = {
   userId: string
   type?: string
   title: string
   body: string
   href?: string | null
+}
+
+function toNotificationContent(payload: NotificationPayload): Pick<CreateNotificationInput, "type" | "title" | "body" | "href"> {
+  if (payload.kind === "reading.reminder") {
+    return {
+      type: payload.kind,
+      title: `Time to pick up ${payload.bookTitle}`,
+      body: `You have not logged progress in ${payload.daysInactive} day(s).`,
+      href: payload.href ?? "/dashboard",
+    }
+  }
+
+  return {
+    type: payload.kind,
+    title: "Recommendation feedback saved",
+    body:
+      payload.feedbackType === "already_read"
+        ? `${payload.recommendationTitle} was marked as already read.`
+        : `${payload.recommendationTitle} was marked as not interested.`,
+    href: payload.href ?? "/dashboard",
+  }
 }
 
 export async function createNotification(input: CreateNotificationInput) {
@@ -25,6 +79,14 @@ export async function createNotification(input: CreateNotificationInput) {
     .returning()
 
   return created
+}
+
+export async function createTypedNotification(payload: NotificationPayload) {
+  const content = toNotificationContent(payload)
+  return createNotification({
+    userId: payload.userId,
+    ...content,
+  })
 }
 
 export async function listNotificationsForUser(userId: string, limit = 100) {

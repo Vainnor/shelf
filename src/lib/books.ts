@@ -1,7 +1,8 @@
-import { and, desc, eq, gte, ilike, lte, ne, or } from "drizzle-orm"
+import { and, desc, eq, gte, ilike, isNull, lte, ne, or } from "drizzle-orm"
 
 import { db } from "@/src/db"
 import { booksTable, bookStatuses } from "@/src/db/schema/book"
+import { recommendationFeedbackTable, recommendationFeedbackTypes } from "@/src/db/schema/reading"
 
 export type BookStatus = (typeof bookStatuses)[number]
 
@@ -48,6 +49,17 @@ export type BookRecommendation = {
   reason: string
   rating: number | null
   sourceBookId: string
+  recommendationKey: string
+}
+
+export type RecommendationFeedbackType = (typeof recommendationFeedbackTypes)[number]
+
+export type RecommendationFeedbackInput = {
+  sourceBookId?: string | null
+  title: string
+  author: string
+  feedbackType: RecommendationFeedbackType
+  notes?: string | null
 }
 
 const STOP_WORDS = new Set([
@@ -230,24 +242,27 @@ export async function deleteBook(userId: string, bookId: string) {
 export async function listReadingRemindersForUser(userId: string, staleAfterDays: number, limit = 8) {
   const days = Math.max(1, Math.floor(staleAfterDays))
   const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+  const now = new Date()
 
   const rows = await db.query.books.findMany({
     where: and(
       eq(booksTable.userId, userId),
       eq(booksTable.status, "reading"),
-      lte(booksTable.updatedAt, cutoffDate)
+      lte(booksTable.updatedAt, cutoffDate),
+      isNull(booksTable.reminderDismissedAt),
+      or(isNull(booksTable.snoozedUntil), lte(booksTable.snoozedUntil, now))
     ),
-    orderBy: [booksTable.updatedAt],
+    orderBy: [booksTable.manualRank, booksTable.updatedAt],
     limit,
   })
 
-  const now = Date.now()
+  const nowMs = Date.now()
   return rows.map((book) => ({
     id: book.id,
     title: book.title,
     author: book.author,
     lastUpdatedAt: book.updatedAt,
-    daysInactive: Math.max(1, Math.floor((now - book.updatedAt.getTime()) / (24 * 60 * 60 * 1000))),
+    daysInactive: Math.max(1, Math.floor((nowMs - book.updatedAt.getTime()) / (24 * 60 * 60 * 1000))),
   }))
 }
 
@@ -255,8 +270,76 @@ function normalizeBookKey(title: string, author: string) {
   return `${title.trim().toLowerCase()}::${author.trim().toLowerCase()}`
 }
 
+export function buildRecommendationKey(title: string, author: string) {
+  return normalizeBookKey(title, author)
+}
+
+export async function setBookManualRank(userId: string, bookId: string, manualRank: number) {
+  const [book] = await db
+    .update(booksTable)
+    .set({
+      manualRank: Math.max(0, Math.floor(manualRank)),
+      updatedAt: new Date(),
+    })
+    .where(and(eq(booksTable.id, bookId), eq(booksTable.userId, userId)))
+    .returning()
+
+  return book
+}
+
+export async function reorderBooksWithinStatus(userId: string, status: BookStatus, orderedBookIds: string[]) {
+  for (const [index, bookId] of orderedBookIds.entries()) {
+    await db
+      .update(booksTable)
+      .set({
+        manualRank: index,
+        status,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(booksTable.id, bookId), eq(booksTable.userId, userId)))
+  }
+}
+
+export async function recordRecommendationFeedback(userId: string, input: RecommendationFeedbackInput) {
+  const recommendationKey = buildRecommendationKey(input.title, input.author)
+  const [feedback] = await db
+    .insert(recommendationFeedbackTable)
+    .values({
+      id: crypto.randomUUID(),
+      userId,
+      sourceBookId: input.sourceBookId ?? null,
+      recommendationKey,
+      feedbackType: input.feedbackType,
+      notes: input.notes ?? null,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: [
+        recommendationFeedbackTable.userId,
+        recommendationFeedbackTable.recommendationKey,
+        recommendationFeedbackTable.feedbackType,
+      ],
+      set: {
+        sourceBookId: input.sourceBookId ?? null,
+        notes: input.notes ?? null,
+        updatedAt: new Date(),
+      },
+    })
+    .returning()
+
+  return feedback
+}
+
+export async function listRecommendationFeedbackForUser(userId: string) {
+  return db.query.recommendationFeedback.findMany({
+    where: eq(recommendationFeedbackTable.userId, userId),
+    orderBy: [desc(recommendationFeedbackTable.updatedAt)],
+    limit: 500,
+  })
+}
+
 export async function listRecommendationsForUser(userId: string, limit = 8) {
-  const [myFinishedBooks, myAllBooks] = await Promise.all([
+  const [myFinishedBooks, myAllBooks, feedbackRows] = await Promise.all([
     db.query.books.findMany({
       where: and(eq(booksTable.userId, userId), eq(booksTable.status, "read")),
       orderBy: [desc(booksTable.finishedAt), desc(booksTable.updatedAt)],
@@ -265,6 +348,10 @@ export async function listRecommendationsForUser(userId: string, limit = 8) {
     db.query.books.findMany({
       where: eq(booksTable.userId, userId),
       limit: 400,
+    }),
+    db.query.recommendationFeedback.findMany({
+      where: eq(recommendationFeedbackTable.userId, userId),
+      limit: 500,
     }),
   ])
 
@@ -290,6 +377,17 @@ export async function listRecommendationsForUser(userId: string, limit = 8) {
   )
 
   const myBookKeys = new Set(myAllBooks.map((book) => normalizeBookKey(book.title, book.author)))
+  const suppressedKeys = new Set(
+    feedbackRows
+      .filter((row) => row.feedbackType === "not_interested" || row.feedbackType === "already_read")
+      .map((row) => row.recommendationKey)
+  )
+  const suppressedSourceIds = new Set(
+    feedbackRows
+      .filter((row) => row.feedbackType === "not_interested" || row.feedbackType === "already_read")
+      .map((row) => row.sourceBookId)
+      .filter((value): value is string => Boolean(value))
+  )
 
   const pool = await db.query.books.findMany({
     where: and(eq(booksTable.status, "read"), ne(booksTable.userId, userId)),
@@ -302,7 +400,7 @@ export async function listRecommendationsForUser(userId: string, limit = 8) {
 
   for (const candidate of pool) {
     const key = normalizeBookKey(candidate.title, candidate.author)
-    if (seen.has(key) || myBookKeys.has(key)) {
+    if (seen.has(key) || myBookKeys.has(key) || suppressedKeys.has(key) || suppressedSourceIds.has(candidate.id)) {
       continue
     }
 
@@ -345,6 +443,7 @@ export async function listRecommendationsForUser(userId: string, limit = 8) {
       reason,
       rating: candidate.rating,
       sourceBookId: candidate.id,
+      recommendationKey: key,
     })
 
     if (ranked.length >= limit) {

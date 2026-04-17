@@ -71,6 +71,13 @@
       "when": 1776422400000,
       "tag": "0009_release_announcements",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776531600000,
+      "tag": "0010_data_foundations",
+      "breakpoints": true
     }
   ]
 }

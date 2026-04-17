@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
 import { getSession } from "@/src/actions/auth"
-import { changeBookStatus, getBooks } from "@/src/actions/books"
+import { getBooks, persistBoardOrder } from "@/src/actions/books"
 import ProfileMenu from "@/src/components/auth/profile-menu"
 import NotificationsButton from "@/src/components/notifications/notifications-button"
 import { Badge } from "@/src/components/ui/badge"
@@ -47,6 +47,7 @@ export default function BoardPage() {
   const [movingBookId, setMovingBookId] = useState<string | null>(null)
   const [draggingBookId, setDraggingBookId] = useState<string | null>(null)
   const [dragOverStatus, setDragOverStatus] = useState<BookStatus | null>(null)
+  const [dragOverBookId, setDragOverBookId] = useState<string | null>(null)
   const [touchFallback, setTouchFallback] = useState(false)
   const [justMovedBookId, setJustMovedBookId] = useState<string | null>(null)
 
@@ -95,29 +96,84 @@ export default function BoardPage() {
     return () => window.clearTimeout(timeout)
   }, [justMovedBookId])
 
-  const grouped = useMemo(
-    () => ({
-      to_read: books.filter((book) => book.status === "to_read"),
-      reading: books.filter((book) => book.status === "reading"),
-      read: books.filter((book) => book.status === "read"),
-    }),
-    [books]
-  )
+  const grouped = useMemo(() => {
+    const sortByRank = (items: Book[]) =>
+      [...items].sort((a, b) => {
+        if (a.manualRank !== b.manualRank) {
+          return a.manualRank - b.manualRank
+        }
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      })
 
-  async function moveBook(book: Book, nextStatus: BookStatus) {
-    if (book.status === nextStatus || movingBookId) {
+    return {
+      to_read: sortByRank(books.filter((book) => book.status === "to_read")),
+      reading: sortByRank(books.filter((book) => book.status === "reading")),
+      read: sortByRank(books.filter((book) => book.status === "read")),
+    }
+  }, [books])
+
+  async function persistOrder(nextBooks: Book[]) {
+    const byStatus: Record<BookStatus, string[]> = {
+      to_read: nextBooks
+        .filter((item) => item.status === "to_read")
+        .sort((a, b) => a.manualRank - b.manualRank)
+        .map((item) => item.id),
+      reading: nextBooks
+        .filter((item) => item.status === "reading")
+        .sort((a, b) => a.manualRank - b.manualRank)
+        .map((item) => item.id),
+      read: nextBooks
+        .filter((item) => item.status === "read")
+        .sort((a, b) => a.manualRank - b.manualRank)
+        .map((item) => item.id),
+    }
+
+    await persistBoardOrder({ byStatus })
+  }
+
+  function reorderList(ids: string[], movingId: string, insertIndex: number) {
+    const withoutMoving = ids.filter((id) => id !== movingId)
+    const safeIndex = Math.max(0, Math.min(insertIndex, withoutMoving.length))
+    withoutMoving.splice(safeIndex, 0, movingId)
+    return withoutMoving
+  }
+
+  async function moveBook(book: Book, nextStatus: BookStatus, insertIndex: number) {
+    if (movingBookId) {
       return
     }
 
     setMovingBookId(book.id)
+    const previousBooks = books
+
+    const fromIds = grouped[book.status].map((item) => item.id)
+    const toIds = grouped[nextStatus].map((item) => item.id)
+    const nextFromIds = book.status === nextStatus ? reorderList(fromIds, book.id, insertIndex) : fromIds.filter((id) => id !== book.id)
+    const nextToIds = reorderList(book.status === nextStatus ? nextFromIds : toIds, book.id, insertIndex)
+
+    const rankById = new Map<string, { status: BookStatus; manualRank: number }>()
+    nextFromIds.forEach((id, index) => rankById.set(id, { status: book.status, manualRank: index }))
+    nextToIds.forEach((id, index) => rankById.set(id, { status: nextStatus, manualRank: index }))
+
+    const optimistic = books.map((item) => {
+      const next = rankById.get(item.id)
+      if (!next) return item
+      return {
+        ...item,
+        status: next.status,
+        manualRank: next.manualRank,
+      }
+    })
+
+    setBooks(optimistic)
+
     try {
-      await changeBookStatus(book.id, nextStatus)
-      const refreshed = await getBooks()
-      setBooks(refreshed)
+      await persistOrder(optimistic)
       setJustMovedBookId(book.id)
       toast.success(`Moved to ${statusColumns.find((column) => column.key === nextStatus)?.label ?? "new column"}`)
     } catch (error) {
       console.error("Failed to move book", error)
+      setBooks(previousBooks)
       toast.error("Failed to move book")
     } finally {
       setMovingBookId(null)
@@ -155,6 +211,7 @@ export default function BoardPage() {
   function handleCardDragEnd() {
     setDraggingBookId(null)
     setDragOverStatus(null)
+    setDragOverBookId(null)
   }
 
   function handleColumnDragOver(event: DragEvent<HTMLDivElement>, status: BookStatus) {
@@ -173,11 +230,11 @@ export default function BoardPage() {
     event.preventDefault()
 
     const draggedId = event.dataTransfer.getData("text/book-id")
-    const draggedStatus = event.dataTransfer.getData("text/book-status") as BookStatus
     setDragOverStatus(null)
     setDraggingBookId(null)
+    setDragOverBookId(null)
 
-    if (!draggedId || draggedStatus === status) {
+    if (!draggedId) {
       return
     }
 
@@ -186,7 +243,36 @@ export default function BoardPage() {
       return
     }
 
-    await moveBook(book, status)
+    const insertIndex = grouped[status].length
+    await moveBook(book, status, insertIndex)
+  }
+
+  function handleCardDragOver(event: DragEvent<HTMLDivElement>, bookId: string, status: BookStatus) {
+    event.preventDefault()
+    event.stopPropagation()
+    setDragOverStatus(status)
+    setDragOverBookId(bookId)
+  }
+
+  async function handleCardDrop(event: DragEvent<HTMLDivElement>, targetBook: Book) {
+    event.preventDefault()
+    event.stopPropagation()
+
+    const draggedId = event.dataTransfer.getData("text/book-id")
+    if (!draggedId || draggedId === targetBook.id) {
+      return
+    }
+
+    const book = getBookById(draggedId)
+    if (!book) {
+      return
+    }
+
+    const targetIndex = grouped[targetBook.status].findIndex((item) => item.id === targetBook.id)
+    setDragOverBookId(null)
+    setDragOverStatus(null)
+    setDraggingBookId(null)
+    await moveBook(book, targetBook.status, targetIndex)
   }
 
   if (loading) {
@@ -275,12 +361,15 @@ export default function BoardPage() {
                         draggable
                         onDragStart={(event) => handleCardDragStart(event, book)}
                         onDragEnd={handleCardDragEnd}
+                        onDragOver={(event) => handleCardDragOver(event, book.id, column.key)}
+                        onDrop={(event) => void handleCardDrop(event, book)}
                         className={cn(
                           "space-y-2 rounded-md border border-border/70 p-3",
                           "cursor-grab active:cursor-grabbing",
                           "transition-all duration-500",
                           draggingBookId === book.id && "scale-[0.99] opacity-55",
-                          justMovedBookId === book.id && "-translate-y-0.5 bg-primary/10 ring-1 ring-primary/50"
+                          justMovedBookId === book.id && "-translate-y-0.5 bg-primary/10 ring-1 ring-primary/50",
+                          dragOverBookId === book.id && "ring-1 ring-primary/50"
                         )}
                       >
                         <button
@@ -319,7 +408,9 @@ export default function BoardPage() {
                                 <button
                                   key={`${book.id}-touch-${candidate.key}`}
                                   type="button"
-                                  onClick={() => void moveBook(book, candidate.key)}
+                                  onClick={() =>
+                                    void moveBook(book, candidate.key, grouped[candidate.key].length)
+                                  }
                                   disabled={movingBookId === book.id}
                                   className={cn(
                                     buttonVariants({ variant: "outline", size: "sm" }),

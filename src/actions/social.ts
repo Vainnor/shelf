@@ -439,6 +439,26 @@ export async function joinBookClub(clubId: string) {
 
   revalidatePath("/social")
 
+  const moderatorsAndOwners = await db.query.bookClubMembers.findMany({
+    where: and(eq(bookClubMembersTable.clubId, clubId), inArray(bookClubMembersTable.role, ["owner", "moderator"])),
+    columns: { userId: true },
+  })
+
+  await Promise.all(
+    moderatorsAndOwners
+      .map((entry) => entry.userId)
+      .filter((userId) => userId !== session.user.id)
+      .map((userId) =>
+        createNotification({
+          userId,
+          type: "club.member_joined",
+          title: "New club member",
+          body: `${session.user.name ?? session.user.email} joined your club.`,
+          href: `/clubs/${clubId}/members`,
+        })
+      )
+  )
+
   return { ok: true }
 }
 
@@ -477,6 +497,26 @@ export async function leaveBookClub(clubId: string) {
   })
 
   revalidatePath("/social")
+
+  const moderatorsAndOwners = await db.query.bookClubMembers.findMany({
+    where: and(eq(bookClubMembersTable.clubId, clubId), inArray(bookClubMembersTable.role, ["owner", "moderator"])),
+    columns: { userId: true },
+  })
+
+  await Promise.all(
+    moderatorsAndOwners
+      .map((entry) => entry.userId)
+      .filter((userId) => userId !== session.user.id)
+      .map((userId) =>
+        createNotification({
+          userId,
+          type: "club.member_left",
+          title: "Member left club",
+          body: `${session.user.name ?? session.user.email} left your club.`,
+          href: `/clubs/${clubId}/members`,
+        })
+      )
+  )
 
   return { ok: true }
 }

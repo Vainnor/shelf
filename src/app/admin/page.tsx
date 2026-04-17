@@ -14,6 +14,7 @@ import ConfirmDeleteSubmitButton from "@/src/components/ui/confirm-delete-submit
 import { Badge } from "@/src/components/ui/badge"
 import { buttonVariants } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
+import SeedControls from "@/src/components/admin/seed-controls"
 import { db } from "@/src/db"
 import { booksTable } from "@/src/db/schema/book"
 import { getSystemSettings, requireAdminUser } from "@/src/lib/admin"
@@ -186,6 +187,16 @@ export default async function AdminPage() {
             Backup helper
           </Link>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Seeder controls</CardTitle>
+            <CardDescription>Run demo seed in dry-run/apply/cleanup modes with explicit confirmations.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SeedControls />
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
