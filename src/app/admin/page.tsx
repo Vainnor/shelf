@@ -8,17 +8,22 @@ import {
   setSignupsEnabledByAdmin,
   toggleUserDisabledByAdmin,
 } from "@/src/actions/admin-users"
+import { upsertReleaseAnnouncementByAdmin } from "@/src/actions/release-announcements"
+import NotificationsButton from "@/src/components/notifications/notifications-button"
+import ConfirmDeleteSubmitButton from "@/src/components/ui/confirm-delete-submit-button"
 import { Badge } from "@/src/components/ui/badge"
 import { buttonVariants } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { db } from "@/src/db"
 import { booksTable } from "@/src/db/schema/book"
 import { getSystemSettings, requireAdminUser } from "@/src/lib/admin"
+import { getLatestReleaseAnnouncement } from "@/src/lib/release-announcements"
 import { cn } from "@/src/lib/utils"
 
 export default async function AdminPage() {
   const { user: adminUser } = await requireAdminUser()
   const settings = await getSystemSettings()
+  const latestRelease = await getLatestReleaseAnnouncement()
 
   const users = await db.query.user.findMany({
     orderBy: (user, { desc }) => [desc(user.createdAt)],
@@ -44,14 +49,105 @@ export default async function AdminPage() {
             <p className="text-muted-foreground">Manage users, account access, and signup policy.</p>
           </div>
 
-          <Link
-            href="/dashboard"
-            className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}
-          >
-            <ArrowLeft className="size-4" />
-            Back to dashboard
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/dashboard"
+              className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}
+            >
+              <ArrowLeft className="size-4" />
+              Back to dashboard
+            </Link>
+            <NotificationsButton />
+          </div>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Release popup</CardTitle>
+            <CardDescription>
+              Configure an in-app announcement modal for the next release.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form action={upsertReleaseAnnouncementByAdmin} className="space-y-5">
+              <div className="grid gap-4 rounded-lg border border-border/70 bg-muted/20 p-4 md:grid-cols-2">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="font-medium">Version key</span>
+                  <input
+                    name="versionKey"
+                    defaultValue={latestRelease?.versionKey ?? ""}
+                    placeholder="v1.2.0"
+                    className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                    required
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="font-medium">Release link (optional)</span>
+                  <input
+                    name="releaseLink"
+                    type="url"
+                    defaultValue={latestRelease?.releaseLink ?? ""}
+                    placeholder="https://github.com/your-org/your-repo/releases/tag/v1.2.0"
+                    className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                  />
+                </label>
+              </div>
+
+              <div className="space-y-4 rounded-lg border border-border/70 bg-muted/20 p-4">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="font-medium">Title</span>
+                  <input
+                    name="title"
+                    defaultValue={latestRelease?.title ?? ""}
+                    placeholder="What is new in this release"
+                    className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                    required
+                  />
+                </label>
+
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="font-medium">Body</span>
+                  <textarea
+                    name="body"
+                    defaultValue={latestRelease?.body ?? ""}
+                    rows={5}
+                    placeholder="Describe new features, bug fixes, and important updates."
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    required
+                  />
+                </label>
+
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="font-medium">Image URLs (one per line)</span>
+                  <textarea
+                    name="imageUrls"
+                    defaultValue={(latestRelease?.imageUrls ?? []).join("\n")}
+                    rows={4}
+                    placeholder="https://.../screenshot-1.png"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  />
+                </label>
+
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="isActive"
+                    value="true"
+                    defaultChecked={latestRelease?.isActive ?? false}
+                    className="size-4"
+                  />
+                  Make this release announcement active
+                </label>
+              </div>
+
+              <div className="flex justify-end">
+                <button type="submit" className={cn(buttonVariants({ variant: "default", size: "sm" }))}>
+                  Save release popup
+                </button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
@@ -144,13 +240,7 @@ export default async function AdminPage() {
 
                   <form action={deleteUserByAdmin}>
                     <input type="hidden" name="userId" value={user.id} />
-                    <button
-                      type="submit"
-                      disabled={user.id === adminUser.id}
-                      className={cn(buttonVariants({ variant: "destructive", size: "sm" }))}
-                    >
-                      Delete
-                    </button>
+                    <ConfirmDeleteSubmitButton label="Delete" disabled={user.id === adminUser.id} />
                   </form>
                 </div>
               </div>

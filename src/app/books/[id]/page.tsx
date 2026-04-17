@@ -1,12 +1,13 @@
 "use client"
 
-import { ArrowLeft, Edit2, Trash2, BookOpen, Quote } from "lucide-react"
+import { ArrowLeft, Edit2, BookOpen, Quote } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import { Badge } from "@/src/components/ui/badge"
 import { Button } from "@/src/components/ui/button"
+import ConfirmDeleteButton from "@/src/components/ui/confirm-delete-button"
 import { Input } from "@/src/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import type { booksTable } from "@/src/db/schema/book"
@@ -24,6 +25,7 @@ import {
 } from "@/src/actions/books"
 import { getSession } from "@/src/actions/auth"
 import ProfileMenu from "@/src/components/auth/profile-menu"
+import NotificationsButton from "@/src/components/notifications/notifications-button"
 
 export const dynamic = "force-dynamic"
 
@@ -150,15 +152,16 @@ export default function BookDetailPage() {
   }, [session?.user?.id, bookId])
 
   const handleDelete = async () => {
-    if (!book || !confirm("Are you sure you want to delete this book?")) return
+    if (!book) return
 
     setIsDeleting(true)
     try {
       await removeBook(book.id)
+      toast.success("Book deleted")
       router.push("/dashboard")
     } catch (error) {
       console.error("Error deleting book:", error)
-      alert("Failed to delete book")
+      toast.error("Failed to delete book")
       setIsDeleting(false)
     }
   }
@@ -289,8 +292,6 @@ export default function BookDetailPage() {
   }
 
   const handleDeleteHighlight = async (highlightId: string) => {
-    if (!confirm("Delete this highlight?")) return
-
     setIsDeletingHighlightId(highlightId)
     try {
       await removeBookHighlightForBook(highlightId)
@@ -360,18 +361,21 @@ export default function BookDetailPage() {
     <main className="min-h-svh bg-background p-6 lg:p-10">
       <section className="mx-auto w-full max-w-4xl space-y-6">
         {/* Header with navigation */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <Button variant="outline" onClick={() => router.back()} className="gap-2">
             <ArrowLeft className="size-4" />
             Back
           </Button>
-          <ProfileMenu
-            name={session?.user?.name ?? ""}
-            email={session?.user?.email ?? ""}
-            image={session?.user?.image}
-            isAdmin={session?.user?.role === "admin"}
-            username={session?.user?.username}
-          />
+          <div className="flex items-center gap-2">
+            <NotificationsButton />
+            <ProfileMenu
+              name={session?.user?.name ?? ""}
+              email={session?.user?.email ?? ""}
+              image={session?.user?.image}
+              isAdmin={session?.user?.role === "admin"}
+              username={session?.user?.username}
+            />
+          </div>
         </div>
 
         {/* Main content */}
@@ -551,14 +555,14 @@ export default function BookDetailPage() {
                           >
                             Edit
                           </Button>
-                          <Button
-                            variant="destructive"
+                          <ConfirmDeleteButton
+                            variant="outline"
                             size="sm"
-                            onClick={() => handleDeleteHighlight(highlight.id)}
+                            onConfirmAction={() => handleDeleteHighlight(highlight.id)}
+                            label="Delete"
+                            pendingLabel="Deleting..."
                             disabled={isDeletingHighlightId === highlight.id}
-                          >
-                            {isDeletingHighlightId === highlight.id ? "Deleting..." : "Delete"}
-                          </Button>
+                          />
                         </div>
                       </div>
                     ))
@@ -602,15 +606,14 @@ export default function BookDetailPage() {
                 <Edit2 className="size-4" />
                 Edit
               </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDelete}
+              <ConfirmDeleteButton
+                variant="outline"
+                onConfirmAction={handleDelete}
                 disabled={isDeleting}
                 className="gap-2"
-              >
-                <Trash2 className="size-4" />
-                {isDeleting ? "Deleting..." : "Delete"}
-              </Button>
+                pendingLabel="Deleting..."
+                label="Delete"
+              />
             </div>
           </div>
         </div>

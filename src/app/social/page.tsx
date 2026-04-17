@@ -17,6 +17,7 @@ import {
 } from "@/src/actions/social"
 import { getMyPendingClubInvites, respondToClubInvite } from "@/src/actions/clubs"
 import ProfileMenu from "@/src/components/auth/profile-menu"
+import NotificationsButton from "@/src/components/notifications/notifications-button"
 import { Badge } from "@/src/components/ui/badge"
 import { Button, buttonVariants } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
@@ -191,6 +192,7 @@ export default function SocialPage() {
               <ArrowLeft className="size-4" />
               Dashboard
             </Link>
+            <NotificationsButton />
             <ProfileMenu
               name={session?.user?.name ?? ""}
               email={session?.user?.email ?? ""}

@@ -16,6 +16,98 @@ export type SettingsActionState = {
   deleted?: boolean
 }
 
+type ExportBookInput = {
+  title?: unknown
+  author?: unknown
+  totalPages?: unknown
+  currentPage?: unknown
+  status?: unknown
+  isbn?: unknown
+  coverUrl?: unknown
+  notes?: unknown
+  rating?: unknown
+  review?: unknown
+  isFavorite?: unknown
+  dailyPageGoal?: unknown
+  targetFinishDate?: unknown
+  startedAt?: unknown
+  finishedAt?: unknown
+  createdAt?: unknown
+  updatedAt?: unknown
+}
+
+function parseNumber(value: unknown, fallback: number | null = null) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) {
+      return parsed
+    }
+  }
+  return fallback
+}
+
+function parseDate(value: unknown) {
+  if (typeof value !== "string" || !value.trim()) {
+    return null
+  }
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function parseBookStatus(value: unknown): "to_read" | "reading" | "read" {
+  if (value === "to_read" || value === "reading" || value === "read") {
+    return value
+  }
+  return "to_read"
+}
+
+function normalizeImportedBooks(rawBooks: unknown) {
+  if (!Array.isArray(rawBooks)) {
+    return []
+  }
+
+  return rawBooks
+    .map((entry): ExportBookInput | null => (entry && typeof entry === "object" ? (entry as ExportBookInput) : null))
+    .filter((entry): entry is ExportBookInput => Boolean(entry))
+    .map((book) => {
+      const title = typeof book.title === "string" ? book.title.trim() : ""
+      const author = typeof book.author === "string" ? book.author.trim() : ""
+
+      if (!title || !author) {
+        return null
+      }
+
+      const totalPages = parseNumber(book.totalPages)
+      const currentPage = parseNumber(book.currentPage, 0) ?? 0
+      const rating = parseNumber(book.rating)
+
+      return {
+        id: crypto.randomUUID(),
+        title,
+        author,
+        totalPages,
+        currentPage: Math.max(0, currentPage),
+        status: parseBookStatus(book.status),
+        isbn: typeof book.isbn === "string" && book.isbn.trim() ? book.isbn.trim() : null,
+        coverUrl: typeof book.coverUrl === "string" && book.coverUrl.trim() ? book.coverUrl.trim() : null,
+        notes: typeof book.notes === "string" && book.notes.trim() ? book.notes.trim() : null,
+        rating: rating !== null ? Math.min(5, Math.max(1, Math.round(rating))) : null,
+        review: typeof book.review === "string" && book.review.trim() ? book.review.trim() : null,
+        isFavorite: Boolean(book.isFavorite),
+        dailyPageGoal: parseNumber(book.dailyPageGoal),
+        targetFinishDate: parseDate(book.targetFinishDate),
+        startedAt: parseDate(book.startedAt),
+        finishedAt: parseDate(book.finishedAt),
+        createdAt: parseDate(book.createdAt) ?? new Date(),
+        updatedAt: parseDate(book.updatedAt) ?? new Date(),
+      }
+    })
+    .filter((book): book is NonNullable<typeof book> => Boolean(book))
+}
+
 export async function updateCurrentUserSettings(
   _prevState: SettingsActionState,
   formData: FormData
@@ -169,6 +261,72 @@ export async function exportCurrentUserData(
   } catch (error) {
     console.error("Error exporting current user data:", error)
     return { ok: false, message: "Failed to export account data." }
+  }
+}
+
+export async function importCurrentUserData(
+  _prevState: SettingsActionState,
+  formData: FormData
+): Promise<SettingsActionState> {
+  try {
+    void _prevState
+    const { user } = await requireAuthenticatedUser()
+    const replaceExisting = String(formData.get("replaceExisting") ?? "false") === "true"
+    const importJson = String(formData.get("importJson") ?? "").trim()
+    const importFile = formData.get("importFile")
+
+    let payloadText = importJson
+    if (!payloadText && importFile instanceof File) {
+      payloadText = (await importFile.text()).trim()
+    }
+
+    if (!payloadText) {
+      return { ok: false, message: "Provide export JSON text or upload a JSON file." }
+    }
+
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(payloadText)
+    } catch {
+      return { ok: false, message: "Invalid JSON format." }
+    }
+
+    if (!parsed || typeof parsed !== "object") {
+      return { ok: false, message: "Import payload must be a JSON object." }
+    }
+
+    const payload = parsed as { books?: unknown }
+    const normalizedBooks = normalizeImportedBooks(payload.books)
+
+    if (normalizedBooks.length === 0) {
+      return { ok: false, message: "No valid books found in import payload." }
+    }
+
+    if (replaceExisting) {
+      await db.delete(booksTable).where(eq(booksTable.userId, user.id))
+    }
+
+    await db.insert(booksTable).values(
+      normalizedBooks.map((book) => ({
+        ...book,
+        userId: user.id,
+      }))
+    )
+
+    revalidatePath("/dashboard")
+    revalidatePath("/library")
+    revalidatePath("/books")
+    revalidatePath("/settings")
+
+    return {
+      ok: true,
+      message: replaceExisting
+        ? `Import complete. Replaced your library with ${normalizedBooks.length} book(s).`
+        : `Import complete. Added ${normalizedBooks.length} book(s) to your library.`,
+    }
+  } catch (error) {
+    console.error("Error importing current user data:", error)
+    return { ok: false, message: "Failed to import account data." }
   }
 }
 

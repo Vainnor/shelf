@@ -21,6 +21,7 @@ import {
   collectionBooksTable,
   collectionsTable,
   followsTable,
+  notificationsTable,
   readingGoalsTable,
   readingSessionsTable,
   sharedCollectionMembersTable,
@@ -28,6 +29,7 @@ import {
 } from "./schema/reading"
 import { systemSettingsTable } from "./schema/system"
 import { auditLogsTable } from "./schema/audit"
+import { releaseAnnouncementsTable, releaseAnnouncementViewsTable } from "./schema/release"
 
 const globalForDb = globalThis as typeof globalThis & {
   pool?: Pool
@@ -49,6 +51,7 @@ export const schema = {
   account: accountsTable,
   verification: verificationTokensTable,
   books: booksTable,
+  notifications: notificationsTable,
   tags: tagsTable,
   bookTags: bookTagsTable,
   collections: collectionsTable,
@@ -67,6 +70,8 @@ export const schema = {
   bookProgressEvents: bookProgressEventsTable,
   systemSettings: systemSettingsTable,
   auditLogs: auditLogsTable,
+  releaseAnnouncements: releaseAnnouncementsTable,
+  releaseAnnouncementViews: releaseAnnouncementViewsTable,
 } as const
 
 export const db = drizzle(pool, { schema })

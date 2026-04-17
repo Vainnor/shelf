@@ -13,6 +13,7 @@ import { sendPasswordResetEmail } from "@/src/lib/email"
 
 const socialProviders = getEnabledSocialProvidersConfig()
 const customOAuthProviders = getCustomOAuthProvidersConfig()
+const trustedSocialProviders = Object.keys(socialProviders)
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
@@ -26,6 +27,14 @@ export const auth = betterAuth({
         name: user.name ?? user.email,
         resetUrl: url,
       })
+    },
+  },
+  account: {
+    accountLinking: {
+      enabled: true,
+      allowDifferentEmails: false,
+      updateUserInfoOnLink: true,
+      trustedProviders: trustedSocialProviders,
     },
   },
   database: drizzleAdapter(db, {

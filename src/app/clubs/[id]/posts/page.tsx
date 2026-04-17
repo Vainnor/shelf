@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { deleteClubPost, getClubPageData, postClubDiscussion, updateClubPost } from "@/src/actions/clubs"
 import { Badge } from "@/src/components/ui/badge"
 import { Button } from "@/src/components/ui/button"
+import ConfirmDeleteButton from "@/src/components/ui/confirm-delete-button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 
 export default function ClubPostsPage() {
@@ -194,14 +195,13 @@ export default function ClubPostsPage() {
                       {post.authorUserId === data.viewerUserId ||
                       data.viewerMembership.role === "owner" ||
                       data.viewerMembership.role === "moderator" ? (
-                        <Button
+                        <ConfirmDeleteButton
                           size="sm"
                           variant="outline"
                           disabled={pending}
-                          onClick={() => void handleDelete(post.id)}
-                        >
-                          Delete
-                        </Button>
+                          onConfirmAction={() => handleDelete(post.id)}
+                          label="Delete"
+                        />
                       ) : null}
                     </div>
                   </>

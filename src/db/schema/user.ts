@@ -24,6 +24,8 @@ export const usersTable = pgTable("users", {
   role: userRoleEnum("role").notNull().default("user"),
   isDisabled: boolean("is_disabled").notNull().default(false),
   publicProfileEnabled: boolean("public_profile_enabled").notNull().default(false),
+  publicShowHighlights: boolean("public_show_highlights").notNull().default(false),
+  publicHighlightsLimit: integer("public_highlights_limit").notNull().default(3),
   readingReminderEnabled: boolean("reading_reminder_enabled").notNull().default(false),
   readingReminderChannel: text("reading_reminder_channel").notNull().default("email"),
   readingReminderDays: integer("reading_reminder_days").notNull().default(7),
