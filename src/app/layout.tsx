@@ -4,6 +4,7 @@ import { Geist_Mono, Inter } from "next/font/google"
 import "./globals.css"
 import SiteFooter from "@/src/components/site-footer"
 import { ThemeProvider } from "@/src/components/theme-provider"
+import ReleaseAnnouncementGate from "@/src/components/release/release-announcement-gate"
 import { cn } from "@/src/lib/utils"
 import { Toaster } from "@/src/components/ui/sonner"
 
@@ -36,6 +37,7 @@ export default function RootLayout({
             <div className="flex-1">{children}</div>
             <SiteFooter />
           </div>
+          <ReleaseAnnouncementGate />
           <Toaster position="bottom-right" richColors closeButton />
         </ThemeProvider>
       </body>
