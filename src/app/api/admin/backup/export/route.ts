@@ -25,6 +25,8 @@ export async function GET() {
       targetType: "system",
       targetId: "database",
       metadata: {
+        fileName,
+        exportedAt: payload.exportedAt,
         tableCount,
         rowCount,
       },

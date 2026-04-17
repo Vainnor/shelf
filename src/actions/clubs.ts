@@ -20,6 +20,39 @@ import { createNotification } from "@/src/lib/notifications"
 
 type ClubRole = "owner" | "moderator" | "member"
 
+async function notifyClubMembers(input: {
+  clubId: string
+  actorUserId?: string
+  recipientUserIds?: string[]
+  type: string
+  title: string
+  body: string
+  href?: string
+}) {
+  const recipientUserIds = input.recipientUserIds
+    ? Array.from(new Set(input.recipientUserIds))
+    : (
+        await db.query.bookClubMembers.findMany({
+          where: eq(bookClubMembersTable.clubId, input.clubId),
+          columns: { userId: true },
+        })
+      ).map((row) => row.userId)
+
+  await Promise.all(
+    recipientUserIds
+      .filter((userId) => userId !== input.actorUserId)
+      .map((userId) =>
+        createNotification({
+          userId,
+          type: input.type,
+          title: input.title,
+          body: input.body,
+          href: input.href ?? `/clubs/${input.clubId}`,
+        })
+      )
+  )
+}
+
 async function requireActiveSession() {
   const activeSession = await getActiveSession()
   if (!activeSession) {
@@ -187,6 +220,16 @@ export async function addBookToClubShelf(input: {
   })
 
   revalidatePath(`/clubs/${input.clubId}`)
+
+  await notifyClubMembers({
+    clubId: input.clubId,
+    actorUserId: session.user.id,
+    type: "club.book_added",
+    title: "New book added to club shelf",
+    body: `${title} by ${author}`,
+    href: `/clubs/${input.clubId}`,
+  })
+
   return created
 }
 
@@ -284,26 +327,14 @@ export async function postClubDiscussion(
 
   revalidatePath(`/clubs/${clubId}`)
 
-  if (input.isAnnouncement) {
-    const recipients = await db.query.bookClubMembers.findMany({
-      where: eq(bookClubMembersTable.clubId, clubId),
-      columns: { userId: true },
-    })
-
-    await Promise.all(
-      recipients
-        .filter((member) => member.userId !== session.user.id)
-        .map((member) =>
-          createNotification({
-            userId: member.userId,
-            type: "club.announcement",
-            title: "New club announcement",
-            body: trimmedTitle,
-            href: `/clubs/${clubId}/posts`,
-          })
-        )
-    )
-  }
+  await notifyClubMembers({
+    clubId,
+    actorUserId: session.user.id,
+    type: input.isAnnouncement ? "club.announcement" : "club.reply",
+    title: input.isAnnouncement ? "New club announcement" : "New club discussion",
+    body: trimmedTitle,
+    href: `/clubs/${clubId}/posts`,
+  })
 
   return post
 }
@@ -498,6 +529,17 @@ export async function revokeClubInvite(clubId: string, inviteId: string) {
   })
 
   revalidatePath(`/clubs/${clubId}`)
+
+  await notifyClubMembers({
+    clubId,
+    actorUserId: session.user.id,
+    recipientUserIds: [invite.invitedUserId],
+    type: "club.invite_revoked",
+    title: "Book club invite revoked",
+    body: "Your pending invitation was revoked by a club moderator.",
+    href: "/social",
+  })
+
   return { ok: true }
 }
 
@@ -626,6 +668,17 @@ export async function updateClubMemberRole(clubId: string, targetUserId: string,
   })
 
   revalidatePath(`/clubs/${clubId}`)
+
+  await notifyClubMembers({
+    clubId,
+    actorUserId: session.user.id,
+    recipientUserIds: [targetUserId],
+    type: "club.role_change",
+    title: "Club role updated",
+    body: `Your role in this club was changed to ${role}.`,
+    href: `/clubs/${clubId}`,
+  })
+
   return { ok: true }
 }
 
@@ -665,6 +718,17 @@ export async function removeClubMember(clubId: string, targetUserId: string) {
   })
 
   revalidatePath(`/clubs/${clubId}`)
+
+  await notifyClubMembers({
+    clubId,
+    actorUserId: session.user.id,
+    recipientUserIds: [targetUserId],
+    type: "club.member_removed",
+    title: "Removed from club",
+    body: "A moderator removed you from this book club.",
+    href: "/social",
+  })
+
   return { ok: true }
 }
 

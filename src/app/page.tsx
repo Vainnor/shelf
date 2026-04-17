@@ -54,7 +54,24 @@ const highlights = [
   },
 ]
 
-const demoCovers = Array.from({ length: 10 }, (_, i) => `/book${i + 1}.jpg`)
+const demoCovers = [
+  { cover: "/book1.jpg", title: "Mistborn", author: "Brandon Sanderson", status: "Reading" },
+  { cover: "/book2.jpg", title: "The Well of Ascension", author: "Brandon Sanderson", status: "To Read" },
+  { cover: "/book3.jpg", title: "Red Rising", author: "Pierce Brown", status: "Read" },
+  { cover: "/book4.jpg", title: "Golden Son", author: "Pierce Brown", status: "Reading" },
+  { cover: "/book5.jpg", title: "Morning Star", author: "Pierce Brown", status: "Read" },
+  { cover: "/book6.jpg", title: "The Eye of The World", author: "Robert Jordan", status: "To Read" },
+  { cover: "/book7.jpg", title: "Ender's Game", author: "Orson Scott Card", status: "Reading" },
+  { cover: "/book8.jpg", title: "Oathbringer", author: "Brandon Sanderson", status: "Read" },
+  { cover: "/book9.jpg", title: "Shadows for Silence", author: "Brandon Sanderson", status: "To Read" },
+  { cover: "/book10.jpg", title: "Dune", author: "Frank Herbert", status: "Read" },
+] as const
+
+const statusBadgeStyles: Record<(typeof demoCovers)[number]["status"], string> = {
+  "To Read": "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/35",
+  Reading: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/35",
+  Read: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/35",
+}
 
 export default async function Page() {
   const settings = await getSystemSettings()
@@ -125,9 +142,11 @@ export default async function Page() {
           {highlights.map((highlight) => (
             <Card
               key={highlight.title}
-              className="h-full border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+              className="group relative h-full overflow-hidden border-border/70 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
             >
-              <CardHeader>
+              <div className="pointer-events-none absolute inset-0 opacity-20 transition-opacity duration-300 group-hover:opacity-100 bg-[radial-gradient(circle,rgba(148,163,184,0.24)_1px,transparent_1px)] bg-size-[16px_16px] dark:bg-[radial-gradient(circle,rgba(148,163,184,0.14)_1px,transparent_1px)]" />
+              <div className="pointer-events-none absolute inset-0 opacity-20 transition-opacity duration-300 group-hover:opacity-100 bg-linear-to-br from-primary/8 via-transparent to-primary/5" />
+              <CardHeader className="relative z-10">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <highlight.icon className="size-5 text-primary" />
                   {highlight.title}
@@ -142,9 +161,11 @@ export default async function Page() {
           {shelves.map((shelf, index) => (
             <Card
               key={shelf.title}
-              className="group h-full border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+              className="group relative h-full overflow-hidden border-border/70 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
             >
-              <CardHeader className="space-y-2">
+              <div className="pointer-events-none absolute inset-0 opacity-20 transition-opacity duration-300 group-hover:opacity-100 bg-[radial-gradient(circle,rgba(148,163,184,0.24)_1px,transparent_1px)] bg-size-[16px_16px] dark:bg-[radial-gradient(circle,rgba(148,163,184,0.14)_1px,transparent_1px)]" />
+              <div className="pointer-events-none absolute inset-0 opacity-20 transition-opacity duration-300 group-hover:opacity-100 bg-linear-to-br from-primary/8 via-transparent to-primary/5" />
+              <CardHeader className="relative z-10 space-y-2">
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-2">
                     <Badge className={cn("border", shelf.accent)}>
@@ -155,9 +176,10 @@ export default async function Page() {
                 </div>
                 <CardDescription>{shelf.description}</CardDescription>
               </CardHeader>
-              <CardContent className="pt-0">
-                <div className="rounded-xl border border-border/70 bg-muted/25 p-4 text-sm leading-6 text-muted-foreground transition-colors group-hover:bg-muted/35">
-                  {shelf.note}
+              <CardContent className="relative z-10 pt-0">
+                <div className="relative overflow-hidden rounded-xl border border-border/70 bg-muted/15 p-4 text-sm leading-6 text-muted-foreground transition-colors group-hover:bg-muted/25">
+                  <div className="pointer-events-none absolute inset-0 opacity-35 bg-[radial-gradient(circle,rgba(148,163,184,0.2)_1px,transparent_1px)] bg-size-[14px_14px] dark:bg-[radial-gradient(circle,rgba(148,163,184,0.1)_1px,transparent_1px)]" />
+                  <span className="relative z-10">{shelf.note}</span>
                 </div>
               </CardContent>
             </Card>
@@ -176,14 +198,23 @@ export default async function Page() {
           </CardHeader>
           <CardContent className="grid gap-6 md:grid-cols-[1.2fr_1fr]">
             <div className="grid grid-cols-5 gap-2 rounded-xl border border-border/70 bg-muted/40 p-4">
-              {demoCovers.map((cover, index) => (
-                <img
-                  key={cover}
-                  src={cover}
-                  alt={`Book cover ${index + 1}`}
-                  className="h-36 w-full rounded-sm object-cover shadow-sm transition-transform duration-200 hover:-translate-y-1 hover:shadow-md"
-                  loading="lazy"
-                />
+              {demoCovers.map((book) => (
+                <div key={book.cover} className="group relative h-36 w-full overflow-hidden rounded-sm shadow-sm">
+                  <img
+                    src={book.cover}
+                    alt={`${book.title} cover`}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                    loading="lazy"
+                  />
+                  <div className="pointer-events-none absolute top-2 right-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                    <Badge className={cn("border text-[10px]", statusBadgeStyles[book.status])}>{book.status}</Badge>
+                  </div>
+                  <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/70 via-black/10 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+                  <div className="pointer-events-none absolute inset-x-2 bottom-2 translate-y-2 opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
+                    <p className="line-clamp-2 text-[11px] font-medium text-white">{book.title}</p>
+                    <p className="line-clamp-1 text-[10px] text-slate-200">{book.author}</p>
+                  </div>
+                </div>
               ))}
             </div>
             <div className="space-y-3 rounded-xl border border-border/70 bg-muted/30 p-4">

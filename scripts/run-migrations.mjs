@@ -19,6 +19,17 @@ const requiredSchemaChecks = [
   { kind: "column", table: "notifications", column: "id" },
   { kind: "column", table: "release_announcements", column: "id" },
   { kind: "column", table: "release_announcement_views", column: "id" },
+  { kind: "column", table: "books", column: "manual_rank" },
+  { kind: "column", table: "books", column: "last_reminded_at" },
+  { kind: "column", table: "books", column: "snoozed_until" },
+  { kind: "column", table: "books", column: "reminder_dismissed_at" },
+  { kind: "column", table: "reading_goals", column: "yearly_target" },
+  { kind: "column", table: "reading_goals", column: "monthly_target" },
+  { kind: "column", table: "reading_goals", column: "target_year" },
+  { kind: "column", table: "reading_goals", column: "target_month" },
+  { kind: "column", table: "reading_goals", column: "pacing_updated_at" },
+  { kind: "column", table: "reading_reminder_events", column: "id" },
+  { kind: "column", table: "recommendation_feedback", column: "id" },
 ]
 
 async function hasRelation(client, relationName) {

@@ -11,6 +11,7 @@ import { cn } from "@/src/lib/utils"
 export default function FullBackupTools() {
   const [backupFile, setBackupFile] = useState<File | null>(null)
   const [confirmPhrase, setConfirmPhrase] = useState("")
+  const [mode, setMode] = useState<"dry-run" | "apply">("dry-run")
   const [isImporting, setIsImporting] = useState(false)
 
   async function handleImport(event: FormEvent<HTMLFormElement>) {
@@ -27,6 +28,7 @@ export default function FullBackupTools() {
       const formData = new FormData()
       formData.set("backupFile", backupFile)
       formData.set("confirmPhrase", confirmPhrase)
+      formData.set("mode", mode)
 
       const response = await fetch("/api/admin/backup/import", {
         method: "POST",
@@ -40,7 +42,9 @@ export default function FullBackupTools() {
       }
 
       toast.success(result.message || "Backup imported successfully.")
-      setConfirmPhrase("")
+      if (mode === "apply") {
+        setConfirmPhrase("")
+      }
       setBackupFile(null)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to import backup file.")
@@ -81,25 +85,43 @@ export default function FullBackupTools() {
         </label>
 
         <label className="grid gap-1 text-sm">
+          <span>Import mode</span>
+          <select
+            value={mode}
+            onChange={(event) => setMode(event.target.value === "apply" ? "apply" : "dry-run")}
+            className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+            disabled={isImporting}
+          >
+            <option value="dry-run">Dry-run (preview only)</option>
+            <option value="apply">Apply (replace all data)</option>
+          </select>
+        </label>
+
+        <label className="grid gap-1 text-sm">
           <span>Type confirmation phrase</span>
           <Input
             value={confirmPhrase}
             onChange={(event) => setConfirmPhrase(event.target.value)}
             placeholder="IMPORT ALL DATA"
-            disabled={isImporting}
+            disabled={isImporting || mode !== "apply"}
           />
         </label>
 
-        <Button type="submit" variant="destructive" className="gap-2" disabled={isImporting || !backupFile}>
+        <Button
+          type="submit"
+          variant={mode === "apply" ? "destructive" : "default"}
+          className="gap-2"
+          disabled={isImporting || !backupFile || (mode === "apply" && confirmPhrase.trim() !== "IMPORT ALL DATA")}
+        >
           {isImporting ? (
             <>
               <Loader2 className="size-4 animate-spin" />
-              Importing backup...
+              Processing backup...
             </>
           ) : (
             <>
               <Upload className="size-4" />
-              Import and replace database
+              {mode === "apply" ? "Import and replace database" : "Run dry-run preview"}
             </>
           )}
         </Button>

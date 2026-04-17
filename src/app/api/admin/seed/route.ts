@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { sql } from "drizzle-orm"
 
 import { db } from "@/src/db"
 import { booksTable } from "@/src/db/schema/book"
@@ -19,6 +20,8 @@ import { writeAuditLog } from "@/src/lib/audit"
 import { getActiveSession } from "@/src/lib/session"
 
 export const dynamic = "force-dynamic"
+
+type SeedMode = "dry-run" | "apply" | "cleanup"
 
 type DemoUser = {
   id: string
@@ -202,6 +205,138 @@ function buildDemoBooks(users: DemoUser[]): DemoBook[] {
       coverUrl: template.coverUrl ?? `/book${(templateIndex % 10) + 1}.jpg`,
     }))
   )
+}
+
+function buildSeedSummary() {
+  const users = buildDemoUsers()
+  const books = buildDemoBooks(users)
+
+  return {
+    users: users.length,
+    books: books.length,
+    follows: 11,
+    clubs: 2,
+    memberships: 6,
+    notifications: users.length * 3,
+  }
+}
+
+async function cleanupSeedData() {
+  const tables = [
+    "notifications",
+    "book_highlights",
+    "reading_sessions",
+    "book_progress_events",
+    "book_club_activity",
+    "book_club_invites",
+    "book_club_posts",
+    "book_club_members",
+    "book_clubs",
+    "follows",
+    "books",
+    "users",
+  ] as const
+
+  const counts: Array<{ table: string; rows: number }> = []
+
+  await db.transaction(async (tx) => {
+    for (const table of tables) {
+      const countResult = await tx.execute(
+        sql.raw(`select count(*)::int as count from "${table}" where id like 'seed-%'`)
+      )
+      const rows = Number((countResult.rows[0] as { count: number } | undefined)?.count ?? 0)
+      counts.push({ table, rows })
+      await tx.execute(sql.raw(`delete from "${table}" where id like 'seed-%'`))
+    }
+  })
+
+  return counts
+}
+
+export async function POST(request: Request) {
+  const activeSession = await getActiveSession()
+
+  if (!activeSession || activeSession.user.role !== "admin") {
+    return NextResponse.json({ ok: false, message: "Admin access required." }, { status: 403 })
+  }
+
+  const contentType = request.headers.get("content-type") ?? ""
+  let mode: SeedMode = "apply"
+  let confirmPhrase = ""
+
+  if (contentType.includes("application/json")) {
+    const payload = (await request.json().catch(() => ({}))) as { mode?: string; confirmPhrase?: string }
+    if (payload.mode === "dry-run" || payload.mode === "cleanup" || payload.mode === "apply") {
+      mode = payload.mode
+    }
+    confirmPhrase = String(payload.confirmPhrase ?? "")
+  } else {
+    const form = await request.formData()
+    const rawMode = String(form.get("mode") ?? "apply")
+    if (rawMode === "dry-run" || rawMode === "cleanup" || rawMode === "apply") {
+      mode = rawMode
+    }
+    confirmPhrase = String(form.get("confirmPhrase") ?? "")
+  }
+
+  if (mode === "apply" && confirmPhrase.trim() !== "SEED DEMO DATA") {
+    return NextResponse.json(
+      { ok: false, message: 'Confirmation phrase mismatch. Type "SEED DEMO DATA" to apply seed.' },
+      { status: 400 }
+    )
+  }
+
+  if (mode === "cleanup" && confirmPhrase.trim() !== "CLEANUP SEED DATA") {
+    return NextResponse.json(
+      { ok: false, message: 'Confirmation phrase mismatch. Type "CLEANUP SEED DATA" to clean seed rows.' },
+      { status: 400 }
+    )
+  }
+
+  if (mode === "dry-run") {
+    const summary = buildSeedSummary()
+    await writeAuditLog({
+      actorUserId: activeSession.user.id,
+      scope: "admin",
+      action: "seed.demo_dry_run",
+      targetType: "system",
+      targetId: "demo-seed-v1",
+      metadata: summary,
+    })
+
+    return NextResponse.json({
+      ok: true,
+      mode,
+      message: "Dry-run complete. No records were written.",
+      summary,
+    })
+  }
+
+  if (mode === "cleanup") {
+    const deleted = await cleanupSeedData()
+    const totalDeleted = deleted.reduce((acc, entry) => acc + entry.rows, 0)
+
+    await writeAuditLog({
+      actorUserId: activeSession.user.id,
+      scope: "admin",
+      action: "seed.demo_cleanup",
+      targetType: "system",
+      targetId: "demo-seed-v1",
+      metadata: {
+        totalDeleted,
+        deleted,
+      },
+    })
+
+    return NextResponse.json({
+      ok: true,
+      mode,
+      message: `Cleanup complete. Removed ${totalDeleted} seeded row(s).`,
+      deleted,
+    })
+  }
+
+  return GET()
 }
 
 export async function GET() {

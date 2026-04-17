@@ -5,6 +5,8 @@ import {
   listBooksForUser,
   listReadingRemindersForUser,
   listRecommendationsForUser,
+  recordRecommendationFeedback,
+  reorderBooksWithinStatus,
   createBook,
   updateBook,
   updateBookStatus,
@@ -12,6 +14,7 @@ import {
   type BookQueryFilters,
   type BookStatus,
   type BookInput,
+  type RecommendationFeedbackType,
 } from "@/src/lib/books"
 import { db } from "@/src/db"
 import { booksTable } from "@/src/db/schema/book"
@@ -27,7 +30,12 @@ import {
   createBookHighlight,
   updateBookHighlight,
   deleteBookHighlight,
+  setReadingGoalsV2,
+  computeGoalPace,
 } from "@/src/lib/reading"
+import { dismissReminder, snoozeReminder } from "@/src/lib/reminders"
+import { createTypedNotification } from "@/src/lib/notifications"
+import { readingGoalsTable, readingSessionsTable } from "@/src/db/schema/reading"
 
 async function requireActiveSession() {
   const activeSession = await getActiveSession()
@@ -344,6 +352,173 @@ export async function getReadingReminders(limit = 8) {
 export async function getBookRecommendations(limit = 8) {
   const session = await requireActiveSession()
   return listRecommendationsForUser(session.user.id, limit)
+}
+
+function getYearRange(now: Date) {
+  return {
+    start: new Date(now.getFullYear(), 0, 1),
+    end: new Date(now.getFullYear() + 1, 0, 1),
+  }
+}
+
+function getMonthRange(now: Date) {
+  return {
+    start: new Date(now.getFullYear(), now.getMonth(), 1),
+    end: new Date(now.getFullYear(), now.getMonth() + 1, 1),
+  }
+}
+
+function daysBetween(start: Date, end: Date) {
+  return Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)))
+}
+
+function asPageSum<T extends { pagesRead: number }>(rows: T[]) {
+  return rows.reduce((acc, row) => acc + row.pagesRead, 0)
+}
+
+export async function getReadingGoalsV2() {
+  const session = await requireActiveSession()
+  const now = new Date()
+  const yearRange = getYearRange(now)
+  const monthRange = getMonthRange(now)
+
+  const [goal, yearSessions, monthSessions] = await Promise.all([
+    db.query.readingGoals.findFirst({ where: eq(readingGoalsTable.userId, session.user.id) }),
+    db.query.readingSessions.findMany({
+      where: and(
+        eq(readingSessionsTable.userId, session.user.id),
+        gte(readingSessionsTable.startedAt, yearRange.start)
+      ),
+      columns: { pagesRead: true },
+      limit: 10000,
+    }),
+    db.query.readingSessions.findMany({
+      where: and(
+        eq(readingSessionsTable.userId, session.user.id),
+        gte(readingSessionsTable.startedAt, monthRange.start)
+      ),
+      columns: { pagesRead: true },
+      limit: 10000,
+    }),
+  ])
+
+  const yearProgress = asPageSum(
+    yearSessions.filter((sessionRow) => sessionRow.pagesRead > 0 && sessionRow.pagesRead !== null)
+  )
+  const monthProgress = asPageSum(
+    monthSessions.filter((sessionRow) => sessionRow.pagesRead > 0 && sessionRow.pagesRead !== null)
+  )
+
+  const yearElapsed = daysBetween(yearRange.start, now)
+  const yearTotal = daysBetween(yearRange.start, yearRange.end)
+  const monthElapsed = daysBetween(monthRange.start, now)
+  const monthTotal = daysBetween(monthRange.start, monthRange.end)
+
+  const yearlyTarget = goal?.yearlyTarget ?? null
+  const monthlyTarget = goal?.monthlyTarget ?? null
+
+  return {
+    pagesPerDay: goal?.pagesPerDay ?? 0,
+    yearlyTarget,
+    monthlyTarget,
+    yearProgress,
+    monthProgress,
+    yearPace:
+      yearlyTarget && yearlyTarget > 0
+        ? computeGoalPace({
+            cadence: "yearly",
+            target: yearlyTarget,
+            progress: yearProgress,
+            elapsedDays: yearElapsed,
+            totalDays: yearTotal,
+          })
+        : null,
+    monthPace:
+      monthlyTarget && monthlyTarget > 0
+        ? computeGoalPace({
+            cadence: "monthly",
+            target: monthlyTarget,
+            progress: monthProgress,
+            elapsedDays: monthElapsed,
+            totalDays: monthTotal,
+          })
+        : null,
+    updatedAt: goal?.updatedAt ?? null,
+  }
+}
+
+export type UpdateReadingGoalsV2Input = {
+  pagesPerDay?: number
+  yearlyTarget?: number | null
+  monthlyTarget?: number | null
+}
+
+export async function updateReadingGoalsV2(input: UpdateReadingGoalsV2Input) {
+  const session = await requireActiveSession()
+  const now = new Date()
+
+  return setReadingGoalsV2(session.user.id, {
+    pagesPerDay: input.pagesPerDay,
+    yearlyTarget: input.yearlyTarget,
+    monthlyTarget: input.monthlyTarget,
+    targetYear: now.getFullYear(),
+    targetMonth: now.getMonth() + 1,
+  })
+}
+
+export async function snoozeReadingReminder(bookId: string, days = 3) {
+  const session = await requireActiveSession()
+  const safeDays = Math.max(1, Math.floor(days))
+  const until = new Date(Date.now() + safeDays * 24 * 60 * 60 * 1000)
+  return snoozeReminder(session.user.id, bookId, until)
+}
+
+export async function dismissReadingReminder(bookId: string) {
+  const session = await requireActiveSession()
+  return dismissReminder(session.user.id, bookId)
+}
+
+export type RecommendationFeedbackActionInput = {
+  sourceBookId: string
+  title: string
+  author: string
+  feedbackType: RecommendationFeedbackType
+}
+
+export async function submitRecommendationFeedback(input: RecommendationFeedbackActionInput) {
+  const session = await requireActiveSession()
+  const result = await recordRecommendationFeedback(session.user.id, {
+    sourceBookId: input.sourceBookId,
+    title: input.title,
+    author: input.author,
+    feedbackType: input.feedbackType,
+  })
+
+  await createTypedNotification({
+    kind: "recommendation.feedback",
+    userId: session.user.id,
+    recommendationTitle: input.title,
+    feedbackType: input.feedbackType,
+    href: "/dashboard",
+  })
+
+  return result
+}
+
+export type PersistBoardOrderInput = {
+  byStatus: Record<BookStatus, string[]>
+}
+
+export async function persistBoardOrder(input: PersistBoardOrderInput) {
+  const session = await requireActiveSession()
+  const statuses: BookStatus[] = ["to_read", "reading", "read"]
+
+  for (const status of statuses) {
+    const orderedIds = input.byStatus[status] ?? []
+    await reorderBooksWithinStatus(session.user.id, status, orderedIds)
+  }
+
+  return { ok: true }
 }
 
 export type BookHighlightActionInput = {

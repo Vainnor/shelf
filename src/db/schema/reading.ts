@@ -43,6 +43,13 @@ export const bookClubActivityTypeEnum = pgEnum("book_club_activity_type", [
   "book_removed",
   "discussion_posted",
 ])
+export const reminderEventTypes = ["sent", "snoozed", "dismissed", "acted"] as const
+export const reminderEventTypeEnum = pgEnum("reading_reminder_event_type", reminderEventTypes)
+export const recommendationFeedbackTypes = ["not_interested", "already_read"] as const
+export const recommendationFeedbackTypeEnum = pgEnum(
+  "recommendation_feedback_type",
+  recommendationFeedbackTypes
+)
 
 export const tagsTable = pgTable(
   "tags",
@@ -328,9 +335,63 @@ export const readingGoalsTable = pgTable("reading_goals", {
     .unique()
     .references(() => usersTable.id, { onDelete: "cascade" }),
   pagesPerDay: integer("pages_per_day").notNull().default(0),
+  yearlyTarget: integer("yearly_target"),
+  monthlyTarget: integer("monthly_target"),
+  targetYear: integer("target_year"),
+  targetMonth: integer("target_month"),
+  pacingUpdatedAt: timestamp("pacing_updated_at", { mode: "date" }),
   updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 })
+
+export const readingReminderEventsTable = pgTable(
+  "reading_reminder_events",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    bookId: text("book_id")
+      .notNull()
+      .references(() => booksTable.id, { onDelete: "cascade" }),
+    eventType: reminderEventTypeEnum("event_type").notNull(),
+    details: text("details"),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userCreatedIdx: index("reading_reminder_events_user_created_idx").on(table.userId, table.createdAt),
+    bookCreatedIdx: index("reading_reminder_events_book_created_idx").on(table.bookId, table.createdAt),
+  })
+)
+
+export const recommendationFeedbackTable = pgTable(
+  "recommendation_feedback",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    sourceBookId: text("source_book_id").references(() => booksTable.id, { onDelete: "set null" }),
+    recommendationKey: text("recommendation_key").notNull(),
+    feedbackType: recommendationFeedbackTypeEnum("feedback_type").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => ({
+    uniqueUserSourceFeedbackIdx: uniqueIndex("recommendation_feedback_user_source_type_idx").on(
+      table.userId,
+      table.sourceBookId,
+      table.feedbackType
+    ),
+    uniqueUserRecommendationFeedbackIdx: uniqueIndex("recommendation_feedback_user_key_type_idx").on(
+      table.userId,
+      table.recommendationKey,
+      table.feedbackType
+    ),
+    userUpdatedIdx: index("recommendation_feedback_user_updated_idx").on(table.userId, table.updatedAt),
+  })
+)
 
 export const readingSessionsTable = pgTable(
   "reading_sessions",
