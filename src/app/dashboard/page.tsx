@@ -9,8 +9,9 @@ import ProfileMenu from "@/src/components/auth/profile-menu"
 import NotificationsButton from "@/src/components/notifications/notifications-button"
 import { Badge } from "@/src/components/ui/badge"
 import { Button } from "@/src/components/ui/button"
+import ConfirmDeleteButton from "@/src/components/ui/confirm-delete-button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
-import { BookCard, BookForm } from "@/src/components/books"
+import { BookForm } from "@/src/components/books"
 import type { BookInput, BookStatus } from "@/src/lib/books"
 import type { booksTable } from "@/src/db/schema/book"
 import type { UserRole } from "@/src/db/schema/user"
@@ -175,15 +176,14 @@ export default function DashboardPage() {
   }
 
   const handleDeleteBook = async (bookId: string) => {
-    if (!confirm("Are you sure you want to delete this book?")) return
-
     try {
       await removeBook(bookId)
       await fetchBooks()
+      toast.success("Book deleted")
     } catch (error) {
       console.error("Error deleting book:", error)
       setError("Failed to delete book")
-      alert("Failed to delete book")
+      toast.error("Failed to delete book")
     }
   }
 
@@ -254,6 +254,10 @@ export default function DashboardPage() {
             <Button variant="outline" onClick={() => router.push("/library")} className="gap-2">
               <BookOpen className="size-4" />
               <span className="hidden sm:inline">Library</span>
+            </Button>
+            <Button variant="outline" onClick={() => router.push("/board")} className="gap-2">
+              <span className="hidden sm:inline">Board</span>
+              <span className="sm:hidden">Board</span>
             </Button>
             <NotificationsButton />
             <ProfileMenu
@@ -488,32 +492,81 @@ export default function DashboardPage() {
         ) : (
           <div className="grid gap-6">
             {(["to_read", "reading", "read"] as const).map((status) => (
-              <div key={status}>
-                <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold">
-                  {status === "to_read" && "📚 To Read"}
-                  {status === "reading" && "📖 Currently Reading"}
-                  {status === "read" && "✓ Finished"}
-                  <span className="text-sm font-normal text-muted-foreground">
-                    ({groupedBooks[status].length})
-                  </span>
-                </h2>
-                {groupedBooks[status].length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No books in this category yet.</p>
-                ) : (
-                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                    {groupedBooks[status].map((book) => (
-                      <BookCard
-                        key={book.id}
-                        book={book}
-                        onView={(b) => router.push(`/books/${b.id}`)}
-                        onEdit={handleEditBook}
-                        onDelete={handleDeleteBook}
-                        onStatusChange={handleStatusChange}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
+              <Card key={status}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    {status === "to_read" && "📚 To Read"}
+                    {status === "reading" && "📖 Currently Reading"}
+                    {status === "read" && "✓ Finished"}
+                    <span className="text-sm font-normal text-muted-foreground">
+                      ({groupedBooks[status].length})
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {groupedBooks[status].length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No books in this category yet.</p>
+                  ) : (
+                    <div className="divide-y divide-border rounded-md border border-border/70">
+                      {groupedBooks[status].map((book) => {
+                        const totalPages = book.totalPages ?? 0
+                        const currentPage = Math.max(0, book.currentPage ?? 0)
+                        const progressPercent =
+                          totalPages > 0 ? Math.min(100, Math.round((currentPage / totalPages) * 100)) : 0
+
+                        return (
+                          <div key={book.id} className="flex flex-col gap-3 p-3 md:flex-row md:items-center md:justify-between">
+                            <div className="min-w-0 flex-1 space-y-2">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium">{book.title}</p>
+                                <p className="truncate text-xs text-muted-foreground">{book.author}</p>
+                              </div>
+
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                  <span>
+                                    {totalPages > 0
+                                      ? `${currentPage} / ${totalPages} pages`
+                                      : `${currentPage} pages tracked`}
+                                  </span>
+                                  <span>{progressPercent}%</span>
+                                </div>
+                                <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                                  <div className="h-full bg-primary transition-all" style={{ width: `${progressPercent}%` }} />
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center justify-end gap-2 md:ml-4 md:w-auto">
+                              <select
+                                value={book.status}
+                                onChange={(event) => void handleStatusChange(book.id, event.target.value as BookStatus)}
+                                className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                              >
+                                <option value="to_read">To Read</option>
+                                <option value="reading">Reading</option>
+                                <option value="read">Finished</option>
+                              </select>
+                              <Button size="sm" variant="outline" onClick={() => router.push(`/books/${book.id}`)}>
+                                View
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => handleEditBook(book)}>
+                                Edit
+                              </Button>
+                              <ConfirmDeleteButton
+                                size="sm"
+                                variant="outline"
+                                onConfirmAction={() => handleDeleteBook(book.id)}
+                                label="Delete"
+                              />
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}

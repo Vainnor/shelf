@@ -1,7 +1,8 @@
 "use client"
 
-import { Trash2, Edit, ArrowRight, Eye } from "lucide-react"
+import { Edit, ArrowRight, Eye } from "lucide-react"
 import { Button } from "@/src/components/ui/button"
+import ConfirmDeleteButton from "@/src/components/ui/confirm-delete-button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { Badge } from "@/src/components/ui/badge"
 import type { booksTable } from "@/src/db/schema/book"
@@ -96,14 +97,13 @@ export function BookCard({ book, onView, onEdit, onDelete, onStatusChange }: Boo
           <Button size="sm" variant="ghost" onClick={() => onEdit(book)}>
             <Edit className="size-4" />
           </Button>
-          <Button
+          <ConfirmDeleteButton
             size="sm"
             variant="ghost"
-            onClick={() => onDelete(book.id)}
+            onConfirmAction={() => onDelete(book.id)}
+            label="Delete"
             className="text-destructive hover:bg-destructive/10"
-          >
-            <Trash2 className="size-4" />
-          </Button>
+          />
         </div>
       </CardContent>
     </Card>

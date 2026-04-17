@@ -10,6 +10,7 @@ import {
 } from "@/src/actions/notifications"
 import { Badge } from "@/src/components/ui/badge"
 import { buttonVariants } from "@/src/components/ui/button"
+import ConfirmDeleteSubmitButton from "@/src/components/ui/confirm-delete-submit-button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { requireAuthenticatedUser } from "@/src/lib/admin"
 import { cn } from "@/src/lib/utils"
@@ -82,9 +83,7 @@ export default async function NotificationsPage() {
               </button>
             </form>
             <form action={deleteReadFromForm}>
-              <button type="submit" className={cn(buttonVariants({ variant: "destructive", size: "sm" }))}>
-                Delete read notifications
-              </button>
+              <ConfirmDeleteSubmitButton label="Delete read notifications" />
             </form>
           </CardContent>
         </Card>
@@ -136,9 +135,7 @@ export default async function NotificationsPage() {
 
                     <form action={deleteSingleFromForm}>
                       <input type="hidden" name="notificationId" value={notification.id} />
-                      <button type="submit" className={cn(buttonVariants({ variant: "destructive", size: "sm" }))}>
-                        Delete
-                      </button>
+                      <ConfirmDeleteSubmitButton label="Delete" />
                     </form>
                   </div>
                 </div>

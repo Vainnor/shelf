@@ -1,11 +1,12 @@
 "use client"
 
-import { Download, KeyRound, TriangleAlert, Trash2 } from "lucide-react"
+import { Download, KeyRound, TriangleAlert } from "lucide-react"
 import { type FormEvent, useActionState, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import {
   deleteCurrentUserAccount,
+  importCurrentUserData,
   exportCurrentUserData,
   sendCurrentUserPasswordReset,
   updateReadingReminderSettings,
@@ -17,6 +18,7 @@ import type { SettingsActionState } from "@/src/actions/settings"
 import { authClient } from "@/src/lib/auth-client"
 import type { AuthProviderOption } from "@/src/lib/auth-providers"
 import { Button } from "@/src/components/ui/button"
+import ConfirmDeleteSubmitButton from "@/src/components/ui/confirm-delete-submit-button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { Input } from "@/src/components/ui/input"
 import type { UserRole } from "@/src/db/schema/user"
@@ -73,6 +75,10 @@ export default function SettingsPanel({
     deleteCurrentUserAccount,
     initialSettingsActionState
   )
+  const [importState, importAction, importPending] = useActionState(
+    importCurrentUserData,
+    initialSettingsActionState
+  )
   const [reminderState, reminderAction, reminderPending] = useActionState(
     updateReadingReminderSettings,
     initialSettingsActionState
@@ -90,6 +96,7 @@ export default function SettingsPanel({
   const [socialPending, setSocialPending] = useState(false)
   const [linkingProviderId, setLinkingProviderId] = useState<string | null>(null)
   const [confirmText, setConfirmText] = useState("")
+  const [replaceExistingImport, setReplaceExistingImport] = useState(false)
 
   const connectedProviderIds = useMemo(() => new Set(linkedProviderIds), [linkedProviderIds])
   const connectableProviders = useMemo(() => availableAuthProviders, [availableAuthProviders])
@@ -171,6 +178,19 @@ export default function SettingsPanel({
 
     toast.error(reminderState.message)
   }, [reminderState])
+
+  useEffect(() => {
+    if (!importState.message) {
+      return
+    }
+
+    if (importState.ok) {
+      toast.success(importState.message)
+      return
+    }
+
+    toast.error(importState.message)
+  }, [importState])
 
   async function handleSocialSettingsSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -522,6 +542,54 @@ export default function SettingsPanel({
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Download className="size-4" />
+            Data import
+          </CardTitle>
+          <CardDescription>
+            Import a previously exported JSON file into your own account.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <form action={importAction} className="space-y-4">
+            <div className="space-y-4 rounded-md border border-border/70 bg-muted/20 p-4">
+              <label className="block space-y-1 text-sm">
+                <span className="block font-medium">Upload export file (optional)</span>
+                <Input name="importFile" type="file" accept="application/json,.json" disabled={importPending} />
+              </label>
+
+              <label className="block space-y-1 text-sm">
+                <span className="block font-medium">Or paste JSON</span>
+                <textarea
+                  name="importJson"
+                  placeholder='{"exportedAt":"...","books":[...]}'
+                  className="h-40 w-full rounded-md border border-input bg-background p-3 font-mono text-xs"
+                  disabled={importPending}
+                />
+              </label>
+
+              <input type="hidden" name="replaceExisting" value={replaceExistingImport ? "true" : "false"} />
+              <label className="inline-flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={replaceExistingImport}
+                  onChange={(event) => setReplaceExistingImport(event.target.checked)}
+                  className="size-4"
+                  disabled={importPending}
+                />
+                Replace existing books before import
+              </label>
+            </div>
+
+            <Button type="submit" variant="outline" disabled={importPending}>
+              {importPending ? "Importing..." : "Import data"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
       <Card className="border-destructive/40">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-destructive">
@@ -551,10 +619,7 @@ export default function SettingsPanel({
               />
             </label>
             <div className="flex flex-wrap items-center gap-3 mt-2">
-              <Button type="submit" variant="destructive" disabled={deletePending}>
-                <Trash2 className="size-4" />
-                {deletePending ? "Deleting..." : "Delete account"}
-              </Button>
+              <ConfirmDeleteSubmitButton label="Delete account" disabled={deletePending} pending={deletePending} />
             </div>
           </form>
         </CardContent>

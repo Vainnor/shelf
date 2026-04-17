@@ -10,6 +10,7 @@ import {
 } from "@/src/actions/admin-users"
 import { upsertReleaseAnnouncementByAdmin } from "@/src/actions/release-announcements"
 import NotificationsButton from "@/src/components/notifications/notifications-button"
+import ConfirmDeleteSubmitButton from "@/src/components/ui/confirm-delete-submit-button"
 import { Badge } from "@/src/components/ui/badge"
 import { buttonVariants } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
@@ -239,13 +240,7 @@ export default async function AdminPage() {
 
                   <form action={deleteUserByAdmin}>
                     <input type="hidden" name="userId" value={user.id} />
-                    <button
-                      type="submit"
-                      disabled={user.id === adminUser.id}
-                      className={cn(buttonVariants({ variant: "destructive", size: "sm" }))}
-                    >
-                      Delete
-                    </button>
+                    <ConfirmDeleteSubmitButton label="Delete" disabled={user.id === adminUser.id} />
                   </form>
                 </div>
               </div>
