@@ -1,15 +1,15 @@
 "use client"
 
-import { ArrowLeft, Edit2, BookOpen, Quote } from "lucide-react"
+import { ArrowLeft, Edit2, Quote } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
-import { Badge } from "@/src/components/ui/badge"
 import { Button } from "@/src/components/ui/button"
 import ConfirmDeleteButton from "@/src/components/ui/confirm-delete-button"
 import { Input } from "@/src/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
+import { BookVisualSummary, statusLabels } from "@/src/components/books"
 import type { booksTable } from "@/src/db/schema/book"
 import type { UserRole } from "@/src/db/schema/user"
 import {
@@ -43,17 +43,6 @@ type Session = {
 type ProgressEvent = Awaited<ReturnType<typeof getBookTimeline>>[number]
 type BookHighlight = Awaited<ReturnType<typeof getBookHighlightsForBook>>[number]
 
-const statusColors = {
-  to_read: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  reading: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  read: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-}
-
-const statusLabels = {
-  to_read: "To Read",
-  reading: "Reading",
-  read: "Finished",
-}
 
 const STORAGE_TIME_MODE_KEY = "shelf.books.log.timeMode.v1"
 const STORAGE_DURATION_MODE_KEY = "shelf.books.log.durationMode.v1"
@@ -464,13 +453,12 @@ export default function BookDetailPage() {
     )
   }
 
-  const progressPercent = book.totalPages ? Math.round((book.currentPage / book.totalPages) * 100) : 0
   const formattedStartDate = book.startedAt ? new Date(book.startedAt).toLocaleDateString() : null
   const formattedFinishDate = book.finishedAt ? new Date(book.finishedAt).toLocaleDateString() : null
 
   return (
     <main className="min-h-svh bg-background p-6 lg:p-10">
-      <section className="mx-auto w-full max-w-4xl space-y-6">
+      <section className="mx-auto w-full max-w-6xl space-y-6">
         {/* Header with navigation */}
         <div className="flex items-center justify-between gap-2">
           <Button variant="outline" onClick={() => router.back()} className="gap-2">
@@ -489,79 +477,79 @@ export default function BookDetailPage() {
           </div>
         </div>
 
-        {/* Main content */}
-        <div className="grid gap-6 md:grid-cols-3">
-          {/* Book Cover */}
-          <div className="md:col-span-1">
-            {book.coverUrl ? (
-              <div className="relative aspect-[2/3] rounded-lg overflow-hidden shadow-lg">
-                <img src={book.coverUrl} alt={book.title} className="w-full h-full object-cover" />
-              </div>
-            ) : (
-              <div className="aspect-[2/3] rounded-lg bg-muted flex items-center justify-center">
-                <BookOpen className="size-12 text-muted-foreground" />
-              </div>
-            )}
-          </div>
-
-          {/* Book Details */}
-          <div className="md:col-span-2 space-y-6">
-            {/* Title and basic info */}
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tight">{book.title}</h1>
-                <p className="text-lg text-muted-foreground">{book.author}</p>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Badge className={statusColors[book.status]}>
-                  {statusLabels[book.status as keyof typeof statusLabels]}
-                </Badge>
-                {book.isbn && <Badge variant="outline">ISBN: {book.isbn}</Badge>}
-              </div>
-            </div>
-
-            {/* Status buttons */}
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Change Status:</p>
-              <div className="flex gap-2 flex-wrap">
-                {(["to_read", "reading", "read"] as const).map((status) => (
-                  <Button
-                    key={status}
-                    variant={book.status === status ? "default" : "outline"}
-                    onClick={() => handleStatusChange(status)}
-                  >
-                    {statusLabels[status]}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Progress */}
-            {book.totalPages && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Reading Progress</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
+        {/* Hero */}
+        <Card>
+          <CardContent className="space-y-6 p-5 sm:p-6">
+            <BookVisualSummary
+              title={book.title}
+              author={book.author}
+              status={book.status}
+              currentPage={book.currentPage}
+              totalPages={book.totalPages}
+              coverUrl={book.coverUrl}
+              isbn={book.isbn}
+              isFavorite={book.isFavorite}
+              variant="hero"
+            >
+              <div className="space-y-3">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start">
                   <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium">{book.currentPage} pages read</span>
-                      <span className="text-muted-foreground">of {book.totalPages} pages</span>
-                    </div>
-                    <div className="h-3 w-full overflow-hidden rounded-full bg-secondary">
-                      <div
-                        className="h-full bg-primary transition-all"
-                        style={{ width: `${progressPercent}%` }}
-                      />
+                    <p className="text-sm font-medium">Change Status</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(["to_read", "reading", "read"] as const).map((status) => (
+                        <Button
+                          key={status}
+                          variant={book.status === status ? "default" : "outline"}
+                          onClick={() => handleStatusChange(status)}
+                        >
+                          {statusLabels[status]}
+                        </Button>
+                      ))}
                     </div>
                   </div>
-                  <div className="text-sm text-muted-foreground">{progressPercent}% Complete</div>
-                </CardContent>
-              </Card>
-            )}
 
-            <Card>
+                  <div className="flex w-full flex-col gap-2 md:ml-auto md:w-36">
+                    <Button
+                      variant="outline"
+                      onClick={() => router.push(`/books/${book.id}/edit`)}
+                      className="w-full justify-center gap-2"
+                    >
+                      <Edit2 className="size-4" />
+                      Edit
+                    </Button>
+                    <ConfirmDeleteButton
+                      variant="outline"
+                      onConfirmAction={handleDelete}
+                      disabled={isDeleting}
+                      className="w-full justify-center gap-2"
+                      pendingLabel="Deleting..."
+                      label="Delete"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-2 pt-2 text-sm sm:grid-cols-3">
+                  <div className="rounded-md border border-border/70 px-3 py-2">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Added</p>
+                    <p className="mt-1 font-medium">{new Date(book.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  <div className="rounded-md border border-border/70 px-3 py-2">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Started</p>
+                    <p className="mt-1 font-medium">{formattedStartDate ?? "-"}</p>
+                  </div>
+                  <div className="rounded-md border border-border/70 px-3 py-2">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Finished</p>
+                    <p className="mt-1 font-medium">{formattedFinishDate ?? "-"}</p>
+                  </div>
+                </div>
+              </div>
+            </BookVisualSummary>
+          </CardContent>
+        </Card>
+
+        {/* Main sections */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card>
               <CardHeader>
                 <CardTitle className="text-base">Log reading session</CardTitle>
                 <CardDescription>Track time spent reading and pages completed.</CardDescription>
@@ -704,7 +692,7 @@ export default function BookDetailPage() {
               </CardContent>
             </Card>
 
-            <Card>
+          <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Quote className="size-4" />
@@ -787,52 +775,6 @@ export default function BookDetailPage() {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Dates */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Timeline</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Added:</span>
-                  <span>{new Date(book.createdAt).toLocaleDateString()}</span>
-                </div>
-                {formattedStartDate && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Started:</span>
-                    <span>{formattedStartDate}</span>
-                  </div>
-                )}
-                {formattedFinishDate && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Finished:</span>
-                    <span>{formattedFinishDate}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Actions */}
-            <div className="flex gap-2 pt-2">
-              <Button
-                variant="outline"
-                onClick={() => router.push(`/dashboard?edit=${book.id}`)}
-                className="gap-2"
-              >
-                <Edit2 className="size-4" />
-                Edit
-              </Button>
-              <ConfirmDeleteButton
-                variant="outline"
-                onConfirmAction={handleDelete}
-                disabled={isDeleting}
-                className="gap-2"
-                pendingLabel="Deleting..."
-                label="Delete"
-              />
-            </div>
-          </div>
         </div>
 
         {/* Notes */}
