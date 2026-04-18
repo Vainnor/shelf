@@ -1,6 +1,6 @@
 "use client"
 
-import { BookOpen, ChevronDown, Plus, Sparkles, X } from "lucide-react"
+import { BookOpen, ChevronDown, Plus, Sparkles } from "lucide-react"
 import { useEffect, useState, useCallback, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -11,14 +11,11 @@ import { Badge } from "@/src/components/ui/badge"
 import { Button } from "@/src/components/ui/button"
 import ConfirmDeleteButton from "@/src/components/ui/confirm-delete-button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card"
-import { BookForm } from "@/src/components/books"
-import type { BookInput, BookStatus } from "@/src/lib/books"
+import type { BookStatus } from "@/src/lib/books"
 import type { booksTable } from "@/src/db/schema/book"
 import type { UserRole } from "@/src/db/schema/user"
 import {
   getBooks,
-  addBook,
-  editBook,
   changeBookStatus,
   removeBook,
   getBestBooksThisYear,
@@ -77,9 +74,6 @@ export default function DashboardPage() {
   const [session, setSession] = useState<Session>(null)
   const [books, setBooks] = useState<Book[]>([])
   const [loading, setLoading] = useState(true)
-  const [submitting, setSubmitting] = useState(false)
-  const [selectedBook, setSelectedBook] = useState<Book | undefined>()
-  const [showForm, setShowForm] = useState(false)
   const [sortBy, setSortBy] = useState<"updated" | "title" | "author">("updated")
   const [filterStatus, setFilterStatus] = useState<BookStatus | "all">("all")
   const [searchQuery, setSearchQuery] = useState("")
@@ -209,42 +203,6 @@ export default function DashboardPage() {
     }
   }, [session, fetchBooks, fetchDashboardInsights])
 
-  const handleAddBook = async (data: BookInput) => {
-    setSubmitting(true)
-    setError(null)
-    try {
-      await addBook(data)
-      await fetchBooks()
-      setShowForm(false)
-      toast.success("Book added to your library.")
-    } catch (error) {
-      console.error("Error adding book:", error)
-      setError("Failed to add book")
-      toast.error("Failed to add book")
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handleUpdateBook = async (data: BookInput) => {
-    if (!selectedBook) return
-    setSubmitting(true)
-    setError(null)
-    try {
-      await editBook(selectedBook.id, data)
-      await fetchBooks()
-      setShowForm(false)
-      setSelectedBook(undefined)
-      toast.success("Book updated.")
-    } catch (error) {
-      console.error("Error updating book:", error)
-      setError("Failed to update book")
-      toast.error("Failed to update book")
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
   const handleDeleteBook = async (bookId: string) => {
     try {
       await removeBook(bookId)
@@ -268,16 +226,8 @@ export default function DashboardPage() {
     }
   }
 
-  const handleEditBook = (book: Book) => {
-    window.scrollTo({ top: 0, behavior: "smooth" })
-    setSelectedBook(book)
-    setShowForm(true)
-  }
-
   const handleAddBookClick = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" })
-    setSelectedBook(undefined)
-    setShowForm(true)
+    router.push("/books/new")
   }
 
   const sortBooks = (booksToSort: Book[]) => {
@@ -339,35 +289,6 @@ export default function DashboardPage() {
             />
           </div>
         </div>
-
-        {showForm && (
-          <div>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-semibold">
-                {selectedBook ? "Edit Book" : "Add New Book"}
-              </h2>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setShowForm(false)
-                  setSelectedBook(undefined)
-                }}
-              >
-                <X className="size-4" />
-              </Button>
-            </div>
-            <BookForm
-              book={selectedBook}
-              onSubmit={selectedBook ? handleUpdateBook : handleAddBook}
-              onCancel={() => {
-                setShowForm(false)
-                setSelectedBook(undefined)
-              }}
-              isLoading={submitting}
-            />
-          </div>
-        )}
 
         <div className="flex items-center justify-between gap-4">
           <div className="flex gap-2 flex-wrap">
@@ -691,10 +612,7 @@ export default function DashboardPage() {
                                 <option value="read">Finished</option>
                               </select>
                               <Button size="sm" variant="outline" onClick={() => router.push(`/books/${book.id}`)}>
-                                View
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={() => handleEditBook(book)}>
-                                Edit
+                                Open
                               </Button>
                               <ConfirmDeleteButton
                                 size="sm"
