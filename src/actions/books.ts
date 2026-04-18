@@ -62,9 +62,116 @@ export async function getBooks(filters?: BookStatus | BookQueryFilters) {
 
 export type LogReadingSessionInput = {
   bookId: string
-  durationMinutes: number
-  pagesRead: number
+  timeMode: "duration" | "range"
+  durationMinutes?: number
+  durationHours?: number
+  startTime?: string
+  endTime?: string
+  pageMode: "pages" | "end_page"
+  pagesRead?: number
+  endPage?: number
   notes?: string | null
+}
+
+function toFiniteNumber(value: unknown) {
+  if (typeof value !== "number") {
+    return null
+  }
+
+  if (!Number.isFinite(value)) {
+    return null
+  }
+
+  return value
+}
+
+function parseDateInput(value: string, label: string) {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error(`Invalid ${label}`)
+  }
+
+  return parsed
+}
+
+function resolveSessionDuration(input: LogReadingSessionInput) {
+  if (input.timeMode === "range") {
+    if (!input.startTime || !input.endTime) {
+      throw new Error("Start and end time are required")
+    }
+
+    const startedAt = parseDateInput(input.startTime, "start time")
+    const endedAt = parseDateInput(input.endTime, "end time")
+    const durationMinutes = Math.round((endedAt.getTime() - startedAt.getTime()) / (60 * 1000))
+
+    if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+      throw new Error("End time must be after start time")
+    }
+
+    return {
+      durationMinutes,
+      startedAt,
+    }
+  }
+
+  const hasHoursPart = input.durationHours !== undefined && input.durationHours !== null
+  const directMinutes = toFiniteNumber(input.durationMinutes)
+  if (!hasHoursPart && directMinutes !== null) {
+    if (directMinutes <= 0) {
+      throw new Error("Session minutes must be greater than zero")
+    }
+
+    return {
+      durationMinutes: Math.round(directMinutes),
+      startedAt: undefined,
+    }
+  }
+
+  const hours = Math.max(0, Math.floor(toFiniteNumber(input.durationHours) ?? 0))
+  const minutes = Math.max(0, Math.floor(toFiniteNumber(input.durationMinutes) ?? 0))
+  const combinedMinutes = hours * 60 + minutes
+
+  if (combinedMinutes <= 0) {
+    throw new Error("Session duration must be greater than zero")
+  }
+
+  return {
+    durationMinutes: combinedMinutes,
+    startedAt: undefined,
+  }
+}
+
+function resolvePagesRead(input: LogReadingSessionInput, currentPage: number, totalPages: number | null) {
+  if (input.pageMode === "end_page") {
+    const endPage = toFiniteNumber(input.endPage)
+    if (endPage === null) {
+      throw new Error("End page is required")
+    }
+
+    const normalizedEndPage = Math.max(0, Math.floor(endPage))
+    if (totalPages !== null && normalizedEndPage > totalPages) {
+      throw new Error("End page cannot be greater than total pages")
+    }
+
+    const pagesRead = normalizedEndPage - currentPage
+    if (pagesRead < 0) {
+      throw new Error("End page cannot be less than the current page")
+    }
+
+    return pagesRead
+  }
+
+  const directPages = toFiniteNumber(input.pagesRead)
+  if (directPages === null) {
+    throw new Error("Pages read is required")
+  }
+
+  const normalizedPages = Math.floor(directPages)
+  if (normalizedPages < 0) {
+    throw new Error("Pages read cannot be negative")
+  }
+
+  return normalizedPages
 }
 
 export type IsbnLookupResult = {
@@ -268,10 +375,25 @@ export async function logBookReadingSession(input: LogReadingSessionInput) {
   const session = await requireActiveSession()
 
   try {
-    return await logReadingSession(session.user.id, input)
+    const book = await getBookByIdForUser(session.user.id, input.bookId)
+    if (!book) {
+      throw new Error("Book not found")
+    }
+
+    const { durationMinutes, startedAt } = resolveSessionDuration(input)
+    const currentPage = Math.max(0, book.currentPage ?? 0)
+    const pagesRead = resolvePagesRead(input, currentPage, book.totalPages)
+
+    return await logReadingSession(session.user.id, {
+      bookId: input.bookId,
+      durationMinutes,
+      pagesRead,
+      notes: input.notes,
+      startedAt,
+    })
   } catch (error) {
     console.error("Error logging reading session:", error)
-    throw new Error("Failed to log reading session")
+    throw error instanceof Error ? error : new Error("Failed to log reading session")
   }
 }
 

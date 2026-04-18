@@ -55,6 +55,19 @@ const statusLabels = {
   read: "Finished",
 }
 
+const STORAGE_TIME_MODE_KEY = "shelf.books.log.timeMode.v1"
+const STORAGE_DURATION_MODE_KEY = "shelf.books.log.durationMode.v1"
+const STORAGE_PAGE_MODE_KEY = "shelf.books.log.pageMode.v1"
+
+function formatDateTimeLocal(value: Date) {
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, "0")
+  const day = String(value.getDate()).padStart(2, "0")
+  const hours = String(value.getHours()).padStart(2, "0")
+  const minutes = String(value.getMinutes()).padStart(2, "0")
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
 export default function BookDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -72,10 +85,82 @@ export default function BookDetailPage() {
   const [editingHighlightId, setEditingHighlightId] = useState<string | null>(null)
   const [isSavingHighlight, setIsSavingHighlight] = useState(false)
   const [isDeletingHighlightId, setIsDeletingHighlightId] = useState<string | null>(null)
+  const [timeMode, setTimeMode] = useState<"duration" | "range">("duration")
+  const [durationMode, setDurationMode] = useState<"minutes" | "hours_minutes">("minutes")
   const [sessionMinutes, setSessionMinutes] = useState("30")
+  const [sessionHours, setSessionHours] = useState("0")
+  const [rangeStart, setRangeStart] = useState("")
+  const [rangeEnd, setRangeEnd] = useState("")
+  const [pageMode, setPageMode] = useState<"pages" | "end_page">("pages")
   const [sessionPages, setSessionPages] = useState("15")
+  const [sessionEndPage, setSessionEndPage] = useState("")
   const [sessionNotes, setSessionNotes] = useState("")
   const [isLoggingSession, setIsLoggingSession] = useState(false)
+  const [selectorPrefsHydrated, setSelectorPrefsHydrated] = useState(false)
+
+  useEffect(() => {
+    try {
+      const persistedTimeMode = window.localStorage.getItem(STORAGE_TIME_MODE_KEY)
+      const persistedDurationMode = window.localStorage.getItem(STORAGE_DURATION_MODE_KEY)
+      const persistedPageMode = window.localStorage.getItem(STORAGE_PAGE_MODE_KEY)
+
+      if (persistedTimeMode === "duration" || persistedTimeMode === "range") {
+        setTimeMode(persistedTimeMode)
+      }
+
+      if (persistedDurationMode === "minutes" || persistedDurationMode === "hours_minutes") {
+        setDurationMode(persistedDurationMode)
+      }
+
+      if (persistedPageMode === "pages" || persistedPageMode === "end_page") {
+        setPageMode(persistedPageMode)
+      }
+    } catch {
+      // Ignore unavailable storage (private mode / blocked storage).
+    } finally {
+      setSelectorPrefsHydrated(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!selectorPrefsHydrated) return
+
+    try {
+      window.localStorage.setItem(STORAGE_TIME_MODE_KEY, timeMode)
+    } catch {
+      // Ignore unavailable storage (private mode / blocked storage).
+    }
+  }, [selectorPrefsHydrated, timeMode])
+
+  useEffect(() => {
+    if (!selectorPrefsHydrated) return
+
+    try {
+      window.localStorage.setItem(STORAGE_DURATION_MODE_KEY, durationMode)
+    } catch {
+      // Ignore unavailable storage (private mode / blocked storage).
+    }
+  }, [selectorPrefsHydrated, durationMode])
+
+  useEffect(() => {
+    if (!selectorPrefsHydrated) return
+
+    try {
+      window.localStorage.setItem(STORAGE_PAGE_MODE_KEY, pageMode)
+    } catch {
+      // Ignore unavailable storage (private mode / blocked storage).
+    }
+  }, [selectorPrefsHydrated, pageMode])
+
+  useEffect(() => {
+    if (timeMode !== "range") return
+    if (rangeStart || rangeEnd) return
+
+    const now = new Date()
+    const start = new Date(now.getTime() - 30 * 60 * 1000)
+    setRangeStart(formatDateTimeLocal(start))
+    setRangeEnd(formatDateTimeLocal(now))
+  }, [timeMode, rangeStart, rangeEnd])
 
   // Fetch session
   useEffect(() => {
@@ -185,16 +270,33 @@ export default function BookDetailPage() {
   const handleLogReadingSession = async () => {
     if (!book) return
 
-    const durationMinutes = Number(sessionMinutes)
-    const pagesRead = Number(sessionPages)
+    const minutesValue = sessionMinutes.trim()
+    const hoursValue = sessionHours.trim()
+    const pagesValue = sessionPages.trim()
+    const endPageValue = sessionEndPage.trim()
 
-    if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
-      toast.error("Session minutes must be greater than zero")
+    if (timeMode === "duration") {
+      if (durationMode === "minutes") {
+        if (!minutesValue) {
+          toast.error("Enter total minutes")
+          return
+        }
+      } else if (!hoursValue && !minutesValue) {
+        toast.error("Enter hours and/or minutes")
+        return
+      }
+    } else if (!rangeStart || !rangeEnd) {
+      toast.error("Select a start and end time")
       return
     }
 
-    if (!Number.isFinite(pagesRead) || pagesRead < 0) {
-      toast.error("Pages read cannot be negative")
+    if (pageMode === "pages") {
+      if (!pagesValue) {
+        toast.error("Enter pages read")
+        return
+      }
+    } else if (!endPageValue) {
+      toast.error("Enter the page you ended on")
       return
     }
 
@@ -202,19 +304,28 @@ export default function BookDetailPage() {
     try {
       const result = await logBookReadingSession({
         bookId: book.id,
-        durationMinutes,
-        pagesRead,
+        timeMode,
+        durationMinutes: minutesValue ? Number(minutesValue) : undefined,
+        durationHours: durationMode === "hours_minutes" && hoursValue ? Number(hoursValue) : undefined,
+        startTime: timeMode === "range" ? rangeStart : undefined,
+        endTime: timeMode === "range" ? rangeEnd : undefined,
+        pageMode,
+        pagesRead: pageMode === "pages" && pagesValue ? Number(pagesValue) : undefined,
+        endPage: pageMode === "end_page" && endPageValue ? Number(endPageValue) : undefined,
         notes: sessionNotes.trim() || null,
       })
 
       setBook(result.book)
+      setRangeStart("")
+      setRangeEnd("")
+      setSessionEndPage("")
       setSessionNotes("")
       const items = await getBookTimeline(book.id, 30)
       setTimeline(items)
       toast.success("Reading session logged")
     } catch (error) {
       console.error("Error logging reading session:", error)
-      toast.error("Failed to log reading session")
+      toast.error(error instanceof Error ? error.message : "Failed to log reading session")
     } finally {
       setIsLoggingSession(false)
     }
@@ -456,23 +567,129 @@ export default function BookDetailPage() {
                 <CardDescription>Track time spent reading and pages completed.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <input
-                    type="number"
-                    min={1}
-                    value={sessionMinutes}
-                    onChange={(event) => setSessionMinutes(event.target.value)}
-                    placeholder="Minutes"
-                    className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
-                  />
-                  <input
-                    type="number"
-                    min={0}
-                    value={sessionPages}
-                    onChange={(event) => setSessionPages(event.target.value)}
-                    placeholder="Pages read"
-                    className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
-                  />
+                <div className="space-y-2 rounded-md border border-border/70 p-3">
+                  <p className="text-sm font-medium">Time</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={timeMode === "duration" ? "default" : "outline"}
+                      onClick={() => setTimeMode("duration")}
+                    >
+                      Total duration
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={timeMode === "range" ? "default" : "outline"}
+                      onClick={() => setTimeMode("range")}
+                    >
+                      Start + end time
+                    </Button>
+                  </div>
+
+                  {timeMode === "duration" ? (
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={durationMode === "minutes" ? "default" : "outline"}
+                          onClick={() => setDurationMode("minutes")}
+                        >
+                          Minutes only
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={durationMode === "hours_minutes" ? "default" : "outline"}
+                          onClick={() => setDurationMode("hours_minutes")}
+                        >
+                          Hours + minutes
+                        </Button>
+                      </div>
+
+                      {durationMode === "minutes" ? (
+                        <Input
+                          type="number"
+                          min={1}
+                          value={sessionMinutes}
+                          onChange={(event) => setSessionMinutes(event.target.value)}
+                          placeholder="Total minutes"
+                        />
+                      ) : (
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <Input
+                            type="number"
+                            min={0}
+                            value={sessionHours}
+                            onChange={(event) => setSessionHours(event.target.value)}
+                            placeholder="Hours"
+                          />
+                          <Input
+                            type="number"
+                            min={0}
+                            value={sessionMinutes}
+                            onChange={(event) => setSessionMinutes(event.target.value)}
+                            placeholder="Minutes"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Input
+                        type="datetime-local"
+                        value={rangeStart}
+                        onChange={(event) => setRangeStart(event.target.value)}
+                      />
+                      <Input
+                        type="datetime-local"
+                        value={rangeEnd}
+                        onChange={(event) => setRangeEnd(event.target.value)}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2 rounded-md border border-border/70 p-3">
+                  <p className="text-sm font-medium">Pages</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={pageMode === "pages" ? "default" : "outline"}
+                      onClick={() => setPageMode("pages")}
+                    >
+                      Total pages read
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={pageMode === "end_page" ? "default" : "outline"}
+                      onClick={() => setPageMode("end_page")}
+                    >
+                      End page
+                    </Button>
+                  </div>
+
+                  {pageMode === "pages" ? (
+                    <Input
+                      type="number"
+                      min={0}
+                      value={sessionPages}
+                      onChange={(event) => setSessionPages(event.target.value)}
+                      placeholder="Pages read"
+                    />
+                  ) : (
+                    <Input
+                      type="number"
+                      min={0}
+                      value={sessionEndPage}
+                      onChange={(event) => setSessionEndPage(event.target.value)}
+                      placeholder={`Ended on page (currently ${book.currentPage})`}
+                    />
+                  )}
                 </div>
                 <textarea
                   value={sessionNotes}
