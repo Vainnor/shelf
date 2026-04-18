@@ -501,6 +501,7 @@ export default function BookDetailPage() {
                           key={status}
                           variant={book.status === status ? "default" : "outline"}
                           onClick={() => handleStatusChange(status)}
+                          className="h-9 min-w-28 justify-center"
                         >
                           {statusLabels[status]}
                         </Button>
