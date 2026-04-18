@@ -612,9 +612,6 @@ export default function DashboardPage() {
                                 <option value="read">Finished</option>
                               </select>
                               <Button size="sm" variant="outline" onClick={() => router.push(`/books/${book.id}`)}>
-                                View
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={() => router.push(`/books/${book.id}`)}>
                                 Open
                               </Button>
                               <ConfirmDeleteButton
