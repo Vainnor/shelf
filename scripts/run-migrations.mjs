@@ -5,17 +5,9 @@ import pg from "pg"
 const { Client } = pg
 
 const requiredSchemaChecks = [
-  { kind: "column", table: "users", column: "username" },
-  { kind: "column", table: "users", column: "public_profile_enabled" },
-  { kind: "column", table: "book_club_posts", column: "title" },
-  { kind: "column", table: "book_club_posts", column: "is_announcement" },
-  { kind: "column", table: "book_club_posts", column: "updated_at" },
-  { kind: "column", table: "book_club_posts", column: "edited_at" },
   { kind: "column", table: "users", column: "reading_reminder_enabled" },
   { kind: "column", table: "users", column: "reading_reminder_channel" },
   { kind: "column", table: "users", column: "reading_reminder_days" },
-  { kind: "column", table: "users", column: "public_show_highlights" },
-  { kind: "column", table: "users", column: "public_highlights_limit" },
   { kind: "column", table: "notifications", column: "id" },
   { kind: "column", table: "release_announcements", column: "id" },
   { kind: "column", table: "release_announcement_views", column: "id" },
@@ -54,7 +46,6 @@ async function hasColumn(client, tableName, columnName) {
 async function schemaIsReady(client) {
   for (const check of requiredSchemaChecks) {
     if (check.kind === "column") {
-      // eslint-disable-next-line no-await-in-loop
       const exists = await hasColumn(client, check.table, check.column)
       if (!exists) return false
     }
@@ -110,7 +101,9 @@ async function main() {
   let mode = await selectMigrationMode()
   console.log(`[migrations] Selected mode: ${mode}`)
 
-  let result = runDrizzleCommand(mode)
+  // Always use --force if not running in a TTY (e.g., CI/Docker)
+  const force = !process.stdout.isTTY;
+  let result = runDrizzleCommand(mode, force)
 
   if (result.status !== 0) {
     console.warn(`[migrations] ${mode} failed, trying forced push fallback`)

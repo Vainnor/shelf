@@ -65,16 +65,6 @@ export default async function ProfilePage() {
               <span className="font-medium">Role:</span> {user.role}
             </p>
             <p>
-              <span className="font-medium">Public profile:</span>{" "}
-              {user.publicProfileEnabled && user.username ? (
-                <Link href={`/u/${user.username}`} className="underline underline-offset-4">
-                  Enabled (@{user.username})
-                </Link>
-              ) : (
-                "Disabled"
-              )}
-            </p>
-            <p>
               <span className="font-medium">Email verified:</span> {user.emailVerified ? "Yes" : "No"}
             </p>
             <p>

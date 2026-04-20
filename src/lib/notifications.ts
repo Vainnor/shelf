@@ -7,10 +7,6 @@ export const notificationKinds = [
   "info",
   "reading.reminder",
   "recommendation.feedback",
-  "club.invite",
-  "club.announcement",
-  "club.reply",
-  "club.role_change",
 ] as const
 
 export type NotificationKind = (typeof notificationKinds)[number]

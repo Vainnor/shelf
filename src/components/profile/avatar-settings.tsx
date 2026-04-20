@@ -59,7 +59,6 @@ export default function AvatarSettings({ name, email, currentImage }: AvatarSett
     }
 
     if (clearState.ok) {
-      setAvatarUrl("")
       toast.success(clearState.message)
       return
     }
@@ -115,7 +114,12 @@ export default function AvatarSettings({ name, email, currentImage }: AvatarSett
           </Button>
         </form>
 
-        <form action={clearAction}>
+        <form
+          action={clearAction}
+          onSubmit={() => {
+            setAvatarUrl("")
+          }}
+        >
           <Button type="submit" variant="outline" disabled={clearPending}>
             <Trash2 className="size-4" />
             {clearPending ? "Removing..." : "Remove avatar"}

@@ -17,7 +17,7 @@ import { cn } from "@/src/lib/utils"
 
 export const dynamic = "force-dynamic"
 
-type NotificationFamily = "all" | "club" | "social" | "reading" | "admin" | "general"
+type NotificationFamily = "all" | "reading" | "admin" | "general"
 
 type NotificationsPageProps = {
   searchParams?: Promise<{
@@ -29,8 +29,6 @@ type NotificationsPageProps = {
 type NotificationItem = Awaited<ReturnType<typeof getNotifications>>[number]
 
 function getNotificationFamily(type: string): Exclude<NotificationFamily, "all"> {
-  if (type.startsWith("club.")) return "club"
-  if (type.startsWith("social.")) return "social"
   if (type.startsWith("reading.") || type.startsWith("recommendation.")) return "reading"
   if (type.startsWith("admin.") || type.startsWith("backup.") || type.startsWith("system.")) return "admin"
   return "general"
@@ -38,39 +36,6 @@ function getNotificationFamily(type: string): Exclude<NotificationFamily, "all">
 
 function describeNotification(notification: NotificationItem) {
   const family = getNotificationFamily(notification.type)
-
-  if (notification.type === "club.invite") {
-    return {
-      familyLabel: "Club",
-      eventLabel: "Invitation",
-      actionLabel: "View invite",
-      title: "You were invited to a club",
-      body: notification.body,
-      family,
-    }
-  }
-
-  if (notification.type === "club.announcement") {
-    return {
-      familyLabel: "Club",
-      eventLabel: "Announcement",
-      actionLabel: "Open announcement",
-      title: notification.title,
-      body: notification.body,
-      family,
-    }
-  }
-
-  if (notification.type === "club.reply") {
-    return {
-      familyLabel: "Club",
-      eventLabel: "Discussion",
-      actionLabel: "Open discussion",
-      title: notification.title,
-      body: notification.body,
-      family,
-    }
-  }
 
   if (notification.type === "reading.reminder") {
     return {
@@ -94,44 +59,11 @@ function describeNotification(notification: NotificationItem) {
     }
   }
 
-  if (notification.type === "social.follow") {
-    return {
-      familyLabel: "Social",
-      eventLabel: "Follower",
-      actionLabel: "Open profile",
-      title: notification.title,
-      body: notification.body,
-      family,
-    }
-  }
-
   if (family === "admin") {
     return {
       familyLabel: "Admin",
       eventLabel: "Operations",
       actionLabel: "Open admin",
-      title: notification.title,
-      body: notification.body,
-      family,
-    }
-  }
-
-  if (family === "club") {
-    return {
-      familyLabel: "Club",
-      eventLabel: "Activity",
-      actionLabel: "Open club",
-      title: notification.title,
-      body: notification.body,
-      family,
-    }
-  }
-
-  if (family === "social") {
-    return {
-      familyLabel: "Social",
-      eventLabel: "Update",
-      actionLabel: "Open social",
       title: notification.title,
       body: notification.body,
       family,
@@ -185,8 +117,6 @@ export default async function NotificationsPage({ searchParams }: NotificationsP
   await requireAuthenticatedUser()
   const params = (await searchParams) ?? {}
   const selectedType: NotificationFamily =
-    params.type === "club" ||
-    params.type === "social" ||
     params.type === "reading" ||
     params.type === "admin" ||
     params.type === "general"
@@ -200,8 +130,8 @@ export default async function NotificationsPage({ searchParams }: NotificationsP
       return false
     }
 
-    if (unreadOnly && notification.isRead) {
-      return false
+    if (unreadOnly) {
+      return !notification.isRead
     }
 
     return true
@@ -248,8 +178,6 @@ export default async function NotificationsPage({ searchParams }: NotificationsP
                 className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
               >
                 <option value="all">All types</option>
-                <option value="club">Club</option>
-                <option value="social">Social</option>
                 <option value="reading">Reading</option>
                 <option value="admin">Admin</option>
                 <option value="general">General</option>

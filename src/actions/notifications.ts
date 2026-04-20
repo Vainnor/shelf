@@ -25,7 +25,6 @@ function revalidateNotificationViews() {
   revalidatePath("/notifications")
   revalidatePath("/dashboard")
   revalidatePath("/library")
-  revalidatePath("/social")
   revalidatePath("/books/[id]", "page")
 }
 
