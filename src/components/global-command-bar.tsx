@@ -1,7 +1,7 @@
 "use client"
 
 import { Command, Search } from "lucide-react"
-import { BookOpen, Clock3, Settings } from "lucide-react"
+import { BookOpen, BookText, Clock3, Settings } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react"
 
@@ -26,6 +26,7 @@ function isTypingTarget(target: EventTarget | null) {
 const EMPTY_RESULTS: CommandSearchResult = {
   books: [],
   settings: [],
+  docs: [],
 }
 
 type Section = {
@@ -56,6 +57,7 @@ export default function GlobalCommandBar() {
           : []),
         { key: "books", title: "Books", items: results.books },
         { key: "settings", title: "Settings", items: results.settings },
+        { key: "docs", title: "Docs", items: results.docs },
       ]
 
       return allSections.filter((section) => section.items.length > 0)
@@ -170,11 +172,13 @@ export default function GlobalCommandBar() {
   function getSectionIcon(sectionKey: Section["key"]) {
     if (sectionKey === "books") return BookOpen
     if (sectionKey === "settings") return Settings
+    if (sectionKey === "docs") return BookText
     return Clock3
   }
 
   function getItemIcon(item: CommandTarget) {
     if (item.group === "books") return BookOpen
+    if (item.group === "docs") return BookText
     return Settings
   }
 
@@ -239,7 +243,7 @@ export default function GlobalCommandBar() {
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder={
-                    "Search books and settings..."
+                    "Search books, settings, and docs..."
                   }
                   className="border-none bg-transparent px-0 shadow-none focus-visible:ring-0"
                 />
@@ -315,6 +319,5 @@ export default function GlobalCommandBar() {
     </>
   )
 }
-
 
 
