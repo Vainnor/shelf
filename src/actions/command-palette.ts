@@ -120,7 +120,7 @@ export async function searchCommandTargets(query: string): Promise<CommandSearch
   }
 
   const normalized = query.trim()
-  const sessionUserId = activeSession.session.user.id
+  const sessionUserId = activeSession.user.id
 
   const books = await db.query.books.findMany({
     where: eq(booksTable.userId, sessionUserId),
@@ -146,4 +146,3 @@ export async function searchCommandTargets(query: string): Promise<CommandSearch
     settings: rankTargetsByQuery(settings, normalized, 8),
   }
 }
-
