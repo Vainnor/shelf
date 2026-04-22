@@ -1,6 +1,6 @@
 "use client"
 
-import { BookOpen, ChevronDown, Plus, Sparkles } from "lucide-react"
+import { AlarmClock, BookOpen, ChevronDown, Plus, Sparkles } from "lucide-react"
 import { useEffect, useState, useCallback, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -265,26 +265,33 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="ml-auto flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
             <Button onClick={handleAddBookClick} className="gap-2">
               <Plus className="size-4" />
               Add book
             </Button>
-            <Button variant="outline" onClick={() => router.push("/library")} className="gap-2">
-              <BookOpen className="size-4" />
-              <span className="hidden sm:inline">Library</span>
-            </Button>
-            <Button variant="outline" onClick={() => router.push("/board")} className="gap-2">
-              <span className="hidden sm:inline">Board</span>
-              <span className="sm:hidden">Board</span>
-            </Button>
-            <NotificationsButton />
-            <ProfileMenu
-              name={session?.user?.name ?? ""}
-              email={session?.user?.email ?? ""}
-              image={session?.user?.image}
-              isAdmin={session?.user?.role === "admin"}
-            />
+            <div className="ml-auto flex flex-wrap items-center justify-end gap-2 sm:flex-nowrap">
+              <Button variant="outline" onClick={() => router.push("/library")} className="gap-2">
+                <BookOpen className="size-4" />
+                <span className="hidden sm:inline">Library</span>
+              </Button>
+              <Button variant="outline" onClick={() => router.push("/board")} className="gap-2">
+                <span className="hidden sm:inline">Board</span>
+                <span className="sm:hidden">Board</span>
+              </Button>
+              <Button variant="outline" onClick={() => router.push("/timer")} className="gap-2">
+                <AlarmClock className="size-4" />
+                <span className="hidden sm:inline">Timer</span>
+                <span className="sm:hidden">Timer</span>
+              </Button>
+              <NotificationsButton />
+              <ProfileMenu
+                name={session?.user?.name ?? ""}
+                email={session?.user?.email ?? ""}
+                image={session?.user?.image}
+                isAdmin={session?.user?.role === "admin"}
+              />
+            </div>
           </div>
         </div>
 
@@ -633,4 +640,3 @@ export default function DashboardPage() {
     </main>
   )
 }
-

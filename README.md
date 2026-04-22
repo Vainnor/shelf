@@ -12,6 +12,7 @@ It supports personal reading workflows and admin operations for managing a hoste
 - Rich book metadata: title, author, pages, ISBN, cover URL, notes, rating, review, favorites
 - ISBN lookup via OpenLibrary
 - Reading sessions with timeline/progress events
+- Dedicated timer workspace with stopwatch/countdown and quick session logging
 - Book highlights/quotes with optional page/date
 - Weekly insights and best-books-this-year summaries
 - Rule-based recommendations from completed books and community ratings

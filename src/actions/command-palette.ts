@@ -40,6 +40,14 @@ function buildSettingsTargets(isAdmin: boolean): CommandTarget[] {
       group: "settings",
       resultType: "Route",
     },
+    {
+      id: "settings-timer",
+      label: "Timer",
+      description: "Start a reading timer",
+      href: "/timer",
+      group: "settings",
+      resultType: "Route",
+    },
   ]
 
   if (isAdmin) {
