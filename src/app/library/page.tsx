@@ -1,14 +1,12 @@
 "use client"
 
-import { ArrowLeft, BookOpen } from "lucide-react"
-import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
 import ProfileMenu from "@/src/components/auth/profile-menu"
+import PageHeader from "@/src/components/layout/page-header"
 import NotificationsButton from "@/src/components/notifications/notifications-button"
 import { Badge } from "@/src/components/ui/badge"
-import { buttonVariants } from "@/src/components/ui/button"
 import { Card, CardContent } from "@/src/components/ui/card"
 import type { booksTable } from "@/src/db/schema/book"
 import type { UserRole } from "@/src/db/schema/user"
@@ -110,35 +108,22 @@ export default function LibraryPage() {
     <main className="min-h-svh bg-background p-6 lg:p-10">
       <section className="mx-auto w-full max-w-7xl space-y-8">
         {/* Header */}
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-2">
-            <Badge className="w-fit gap-1.5 px-3 py-1 text-xs uppercase tracking-wide">
-              <BookOpen className="size-3.5" />
-              Library
-            </Badge>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              {displayName}&apos;s Bookshelf
-            </h1>
-            <p className="text-muted-foreground">
-              View all your books displayed as they appear on a shelf.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Link href="/dashboard" className={buttonVariants({ variant: "outline", size: "default" })}>
-              <ArrowLeft className="size-4" />
-              <span className="hidden sm:inline">Back to dashboard</span>
-              <span className="sm:hidden">Dashboard</span>
-            </Link>
-            <NotificationsButton />
-            <ProfileMenu
-              name={session?.user?.name ?? ""}
-              email={session?.user?.email ?? ""}
-              image={session?.user?.image}
-              isAdmin={session?.user?.role === "admin"}
-            />
-          </div>
-        </div>
+        <PageHeader
+          title={`${displayName}'s Bookshelf`}
+          description="View all your books displayed as they appear on a shelf."
+          breadcrumbCurrentLabel="Library"
+          actions={(
+            <>
+              <NotificationsButton />
+              <ProfileMenu
+                name={session?.user?.name ?? ""}
+                email={session?.user?.email ?? ""}
+                image={session?.user?.image}
+                isAdmin={session?.user?.role === "admin"}
+              />
+            </>
+          )}
+        />
 
         {/* Filter buttons */}
         <div className="flex gap-2 flex-wrap">
@@ -331,4 +316,3 @@ export default function LibraryPage() {
     </main>
   )
 }
-

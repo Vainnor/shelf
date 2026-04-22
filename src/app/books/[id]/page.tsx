@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, Edit2, Quote } from "lucide-react"
+import { Edit2, Quote } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -10,6 +10,7 @@ import ConfirmDeleteButton from "@/src/components/ui/confirm-delete-button"
 import { Input } from "@/src/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { BookVisualSummary, statusLabels } from "@/src/components/books"
+import PageHeader from "@/src/components/layout/page-header"
 import type { booksTable } from "@/src/db/schema/book"
 import type { UserRole } from "@/src/db/schema/user"
 import {
@@ -437,11 +438,17 @@ export default function BookDetailPage() {
   if (!book) {
     return (
       <main className="min-h-svh bg-background p-6 lg:p-10">
-        <section className="mx-auto w-full max-w-4xl">
-          <Button variant="outline" onClick={() => router.back()} className="gap-2 mb-6">
-            <ArrowLeft className="size-4" />
-            Go Back
-          </Button>
+        <section className="mx-auto w-full max-w-4xl space-y-6">
+          <PageHeader
+            title="Book not found"
+            description="The selected book no longer exists or you do not have access to it."
+            breadcrumbItems={[
+              { label: "Dashboard", href: "/dashboard" },
+              { label: "Library", href: "/library" },
+              { label: "Book", href: `/books/${bookId}` },
+            ]}
+            breadcrumbCurrentLabel="Book"
+          />
           <Card>
             <CardContent className="pt-6 text-center">
               <p className="text-muted-foreground">Book not found</p>
@@ -458,22 +465,27 @@ export default function BookDetailPage() {
   return (
     <main className="min-h-svh bg-background p-6 lg:p-10">
       <section className="mx-auto w-full max-w-6xl space-y-6">
-        {/* Header with navigation */}
-        <div className="flex items-center justify-between gap-2">
-          <Button variant="outline" onClick={() => router.back()} className="gap-2">
-            <ArrowLeft className="size-4" />
-            Back
-          </Button>
-          <div className="flex items-center gap-2">
-            <NotificationsButton />
-            <ProfileMenu
-              name={session?.user?.name ?? ""}
-              email={session?.user?.email ?? ""}
-              image={session?.user?.image}
-              isAdmin={session?.user?.role === "admin"}
-            />
-          </div>
-        </div>
+        <PageHeader
+          title="Book details"
+          description="Review progress, update status, and manage highlights in one place."
+          breadcrumbItems={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Library", href: "/library" },
+            { label: book.title, href: `/books/${book.id}` },
+          ]}
+          breadcrumbCurrentLabel={book.title}
+          actions={(
+            <>
+              <NotificationsButton />
+              <ProfileMenu
+                name={session?.user?.name ?? ""}
+                email={session?.user?.email ?? ""}
+                image={session?.user?.image}
+                isAdmin={session?.user?.role === "admin"}
+              />
+            </>
+          )}
+        />
 
         {/* Hero */}
         <Card>
@@ -811,4 +823,3 @@ export default function BookDetailPage() {
     </main>
   )
 }
-

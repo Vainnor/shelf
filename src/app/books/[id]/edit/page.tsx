@@ -1,6 +1,5 @@
 "use client"
 
-import { ArrowLeft, PencilLine } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
@@ -9,9 +8,8 @@ import { editBook, getBooks } from "@/src/actions/books"
 import { getSession } from "@/src/actions/auth"
 import ProfileMenu from "@/src/components/auth/profile-menu"
 import { BookComposer } from "@/src/components/books/book-composer"
+import PageHeader from "@/src/components/layout/page-header"
 import NotificationsButton from "@/src/components/notifications/notifications-button"
-import { Badge } from "@/src/components/ui/badge"
-import { Button } from "@/src/components/ui/button"
 import { Card, CardContent } from "@/src/components/ui/card"
 import type { booksTable } from "@/src/db/schema/book"
 import type { UserRole } from "@/src/db/schema/user"
@@ -145,30 +143,28 @@ export default function EditBookPage() {
   return (
     <main className="min-h-svh bg-background p-6 lg:p-10">
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-2">
-            <Badge className="w-fit gap-1.5 px-3 py-1 text-xs uppercase tracking-wide">
-              <PencilLine className="size-3.5" />
-              Edit book
-            </Badge>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Update your book entry</h1>
-            <p className="text-muted-foreground">Keep details, progress, and metadata in sync.</p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => router.push(`/books/${bookId}`)} className="gap-2">
-              <ArrowLeft className="size-4" />
-              Back to detail
-            </Button>
-            <NotificationsButton />
-            <ProfileMenu
-              name={displayName}
-              email={session?.user?.email ?? ""}
-              image={session?.user?.image}
-              isAdmin={session?.user?.role === "admin"}
-            />
-          </div>
-        </div>
+        <PageHeader
+          title="Update your book entry"
+          description="Keep details, progress, and metadata in sync."
+          breadcrumbItems={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Library", href: "/library" },
+            { label: book.title, href: `/books/${bookId}` },
+            { label: "Edit", href: `/books/${bookId}/edit` },
+          ]}
+          breadcrumbCurrentLabel="Edit"
+          actions={(
+            <>
+              <NotificationsButton />
+              <ProfileMenu
+                name={displayName}
+                email={session?.user?.email ?? ""}
+                image={session?.user?.image}
+                isAdmin={session?.user?.role === "admin"}
+              />
+            </>
+          )}
+        />
 
         <BookComposer
           initialDraft={toDraft(book)}
@@ -183,4 +179,3 @@ export default function EditBookPage() {
     </main>
   )
 }
-

@@ -1,7 +1,6 @@
 "use client"
 
-import { AlarmClock, ArrowLeft, BookOpenText, Clock3, Pause, Play, RotateCcw, StopCircle } from "lucide-react"
-import Link from "next/link"
+import { BookOpenText, Clock3, Pause, Play, RotateCcw, StopCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
@@ -9,9 +8,9 @@ import { toast } from "sonner"
 import { getSession } from "@/src/actions/auth"
 import { getBooks, logBookReadingSession } from "@/src/actions/books"
 import ProfileMenu from "@/src/components/auth/profile-menu"
+import PageHeader from "@/src/components/layout/page-header"
 import NotificationsButton from "@/src/components/notifications/notifications-button"
-import { Badge } from "@/src/components/ui/badge"
-import { Button, buttonVariants } from "@/src/components/ui/button"
+import { Button } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { Input } from "@/src/components/ui/input"
 import type { booksTable } from "@/src/db/schema/book"
@@ -478,33 +477,22 @@ export default function ReadingTimerWorkspace() {
   return (
     <main className="min-h-svh bg-background p-6 lg:p-10">
       <section className="relative mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-2">
-            <Badge className="w-fit gap-1.5 px-3 py-1 text-xs uppercase tracking-wide">
-              <AlarmClock className="size-3.5" />
-              Timer
-            </Badge>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Reading Timer</h1>
-            <p className="text-muted-foreground">
-              Track focused reading sessions for {displayName} and log progress in one flow.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Link href="/dashboard" className={buttonVariants({ variant: "outline", size: "default" })}>
-              <ArrowLeft className="size-4" />
-              <span className="hidden sm:inline">Back to dashboard</span>
-              <span className="sm:hidden">Dashboard</span>
-            </Link>
-            <NotificationsButton />
-            <ProfileMenu
-              name={session?.user?.name ?? ""}
-              email={session?.user?.email ?? ""}
-              image={session?.user?.image}
-              isAdmin={session?.user?.role === "admin"}
-            />
-          </div>
-        </div>
+        <PageHeader
+          title="Reading Timer"
+          description={`Track focused reading sessions for ${displayName} and log progress in one flow.`}
+          breadcrumbCurrentLabel="Timer"
+          actions={(
+            <>
+              <NotificationsButton />
+              <ProfileMenu
+                name={session?.user?.name ?? ""}
+                email={session?.user?.email ?? ""}
+                image={session?.user?.image}
+                isAdmin={session?.user?.role === "admin"}
+              />
+            </>
+          )}
+        />
 
         <div className="pointer-events-none absolute inset-x-0 top-24 -z-10 mx-auto h-80 max-w-5xl bg-gradient-to-r from-primary/10 via-secondary/10 to-primary/10 blur-3xl" />
 

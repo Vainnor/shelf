@@ -1,7 +1,6 @@
 import { inArray } from "drizzle-orm"
-import { ArrowLeft, ClipboardList } from "lucide-react"
-import Link from "next/link"
 
+import PageHeader from "@/src/components/layout/page-header"
 import { Badge } from "@/src/components/ui/badge"
 import { buttonVariants } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
@@ -56,20 +55,11 @@ export default async function AdminAuditPage({ searchParams }: AuditPageProps) {
   return (
     <main className="min-h-svh bg-background p-6 lg:p-10">
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <Badge className="mb-2 w-fit gap-1.5">
-              <ClipboardList className="size-3.5" />
-              Admin
-            </Badge>
-            <h1 className="text-3xl font-semibold tracking-tight">Audit logs</h1>
-            <p className="text-muted-foreground">Recent administrative and operational events.</p>
-          </div>
-          <Link href="/admin" className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}>
-            <ArrowLeft className="size-4" />
-            Back to admin
-          </Link>
-        </div>
+        <PageHeader
+          title="Audit logs"
+          description="Recent administrative and operational events."
+          breadcrumbCurrentLabel="Audit"
+        />
 
         <Card>
           <CardHeader>
@@ -144,4 +134,3 @@ export default async function AdminAuditPage({ searchParams }: AuditPageProps) {
     </main>
   )
 }
-
