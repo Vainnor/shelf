@@ -462,7 +462,7 @@ export async function GET() {
         id: makeId("notification", user.id, "info"),
         userId: user.id,
         type: "system.info",
-        title: "Community update",
+        title: "Workspace activity",
         body: "New activity was recorded in your workspace.",
         href: "/dashboard",
         isRead: index % 2 === 0,
@@ -519,4 +519,3 @@ export async function GET() {
     )
   }
 }
-
