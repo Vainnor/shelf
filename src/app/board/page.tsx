@@ -1,7 +1,5 @@
 "use client"
 
-import { ArrowLeft, KanbanSquare } from "lucide-react"
-import Link from "next/link"
 import { type DragEvent, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -9,6 +7,7 @@ import { toast } from "sonner"
 import { getSession } from "@/src/actions/auth"
 import { getBooks, persistBoardOrder } from "@/src/actions/books"
 import ProfileMenu from "@/src/components/auth/profile-menu"
+import PageHeader from "@/src/components/layout/page-header"
 import NotificationsButton from "@/src/components/notifications/notifications-button"
 import { Badge } from "@/src/components/ui/badge"
 import { buttonVariants } from "@/src/components/ui/button"
@@ -276,8 +275,11 @@ export default function BoardPage() {
 
   if (loading) {
     return (
-      <main className="min-h-svh bg-background p-6 lg:p-10">
-        <section className="mx-auto max-w-7xl">
+      <main className="relative isolate min-h-svh overflow-hidden bg-background p-6 lg:p-10">
+        <div className="pointer-events-none absolute inset-0 opacity-45 bg-[radial-gradient(circle,rgba(148,163,184,0.22)_1px,transparent_1px)] bg-size-[20px_20px] dark:bg-[radial-gradient(circle,rgba(148,163,184,0.12)_1px,transparent_1px)]" />
+        <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-background via-background/85 to-muted/10" />
+
+        <section className="relative z-10 mx-auto max-w-7xl">
           <p className="text-sm text-muted-foreground">Loading board...</p>
         </section>
       </main>
@@ -285,37 +287,27 @@ export default function BoardPage() {
   }
 
   return (
-    <main className="min-h-svh bg-background p-6 lg:p-10">
-      <section className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-2">
-            <Badge className="w-fit gap-1.5 px-3 py-1 text-xs uppercase tracking-wide">
-              <KanbanSquare className="size-3.5" />
-              Shelf board
-            </Badge>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Books kanban</h1>
-            <p className="text-muted-foreground">
-              Drag-and-drop board for quickly scanning and moving books between shelf groups.
-            </p>
-          </div>
+    <main className="relative isolate min-h-svh overflow-hidden bg-background p-6 lg:p-10">
+      <div className="pointer-events-none absolute inset-0 opacity-45 bg-[radial-gradient(circle,rgba(148,163,184,0.22)_1px,transparent_1px)] bg-size-[20px_20px] dark:bg-[radial-gradient(circle,rgba(148,163,184,0.12)_1px,transparent_1px)]" />
+      <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-background via-background/85 to-muted/10" />
 
-          <div className="flex items-center gap-2">
-            <Link
-              href="/dashboard"
-              className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}
-            >
-              <ArrowLeft className="size-4" />
-              Dashboard
-            </Link>
-            <NotificationsButton />
-            <ProfileMenu
-              name={session?.user?.name ?? ""}
-              email={session?.user?.email ?? ""}
-              image={session?.user?.image}
-              isAdmin={session?.user?.role === "admin"}
-            />
-          </div>
-        </div>
+      <section className="relative z-10 mx-auto flex w-full max-w-7xl flex-col gap-6">
+        <PageHeader
+          title="Books kanban"
+          description="Drag-and-drop board for quickly scanning and moving books between shelf groups."
+          breadcrumbCurrentLabel="Board"
+          actions={(
+            <>
+              <NotificationsButton />
+              <ProfileMenu
+                name={session?.user?.name ?? ""}
+                email={session?.user?.email ?? ""}
+                image={session?.user?.image}
+                isAdmin={session?.user?.role === "admin"}
+              />
+            </>
+          )}
+        />
 
         <div className="grid gap-4 lg:grid-cols-3">
           {statusColumns.map((column) => (
@@ -432,4 +424,3 @@ export default function BoardPage() {
     </main>
   )
 }
-

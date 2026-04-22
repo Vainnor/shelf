@@ -1,13 +1,10 @@
-import { ArrowLeft, CheckCircle2, Mail, UserRound } from "lucide-react"
-import Link from "next/link"
+import { CheckCircle2, Mail, UserRound } from "lucide-react"
 
 import AvatarSettings from "@/src/components/profile/avatar-settings"
+import PageHeader from "@/src/components/layout/page-header"
 import NotificationsButton from "@/src/components/notifications/notifications-button"
-import { Badge } from "@/src/components/ui/badge"
-import { buttonVariants } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { getProfileSummary } from "@/src/actions/profile"
-import { cn } from "@/src/lib/utils"
 
 export default async function ProfilePage() {
   const { user, stats } = await getProfileSummary()
@@ -17,26 +14,12 @@ export default async function ProfilePage() {
   return (
     <main className="min-h-svh bg-background p-6 lg:p-10">
       <section className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <Badge className="mb-2 w-fit">Profile</Badge>
-            <h1 className="text-3xl font-semibold tracking-tight">Your profile</h1>
-            <p className="text-muted-foreground">
-              View and manage the core details for your Shelf account.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Link
-              href="/dashboard"
-              className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}
-            >
-              <ArrowLeft className="size-4" />
-              Back to dashboard
-            </Link>
-            <NotificationsButton />
-          </div>
-        </div>
+        <PageHeader
+          title="Your profile"
+          description="View and manage the core details for your Shelf account."
+          breadcrumbCurrentLabel="Profile"
+          actions={<NotificationsButton />}
+        />
 
         <Card>
           <CardHeader>
@@ -111,4 +94,3 @@ export default async function ProfilePage() {
     </main>
   )
 }
-

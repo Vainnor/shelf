@@ -1,9 +1,8 @@
 import { eq } from "drizzle-orm"
-import { ArrowLeft } from "lucide-react"
-import Link from "next/link"
 import { notFound } from "next/navigation"
 
 import { updateUserByAdmin } from "@/src/actions/admin-users"
+import PageHeader from "@/src/components/layout/page-header"
 import { buttonVariants } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { Input } from "@/src/components/ui/input"
@@ -27,19 +26,17 @@ export default async function AdminUserEditPage({ params }: { params: Promise<{ 
   return (
     <main className="min-h-svh bg-background p-6 lg:p-10">
       <section className="mx-auto flex w-full max-w-xl flex-col gap-6">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Edit user</h1>
-            <p className="text-muted-foreground">Update profile fields for this account.</p>
-          </div>
-          <Link
-            href="/admin"
-            className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}
-          >
-            <ArrowLeft className="size-4" />
-            Back
-          </Link>
-        </div>
+        <PageHeader
+          title="Edit user"
+          description="Update profile fields for this account."
+          breadcrumbItems={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Admin", href: "/admin" },
+            { label: user.email, href: `/admin/users/${user.id}` },
+          ]}
+          breadcrumbCurrentLabel={user.email}
+          titleClassName="text-2xl sm:text-3xl"
+        />
 
         <Card>
           <CardHeader>
@@ -88,4 +85,3 @@ export default async function AdminUserEditPage({ params }: { params: Promise<{ 
     </main>
   )
 }
-

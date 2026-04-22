@@ -1,13 +1,9 @@
-import { ArrowLeft, DatabaseBackup } from "lucide-react"
-import Link from "next/link"
 import { sql } from "drizzle-orm"
 
-import { Badge } from "@/src/components/ui/badge"
-import { buttonVariants } from "@/src/components/ui/button"
+import PageHeader from "@/src/components/layout/page-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { db } from "@/src/db"
 import { requireAdminUser } from "@/src/lib/admin"
-import { cn } from "@/src/lib/utils"
 import FullBackupTools from "@/src/components/admin/full-backup-tools"
 
 export const dynamic = "force-dynamic"
@@ -26,20 +22,11 @@ export default async function AdminBackupPage() {
   return (
     <main className="min-h-svh bg-background p-6 lg:p-10">
       <section className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <Badge className="mb-2 w-fit gap-1.5">
-              <DatabaseBackup className="size-3.5" />
-              Admin
-            </Badge>
-            <h1 className="text-3xl font-semibold tracking-tight">Backup helper</h1>
-            <p className="text-muted-foreground">Operational notes for export and restore on self-hosted deployments.</p>
-          </div>
-          <Link href="/admin" className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}>
-            <ArrowLeft className="size-4" />
-            Back to admin
-          </Link>
-        </div>
+        <PageHeader
+          title="Backup helper"
+          description="Operational notes for export and restore on self-hosted deployments."
+          breadcrumbCurrentLabel="Backup"
+        />
 
         <Card>
           <CardHeader>

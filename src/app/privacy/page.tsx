@@ -1,11 +1,7 @@
 import type { Metadata } from "next"
-import Link from "next/link"
-import { ArrowLeft, ShieldCheck } from "lucide-react"
 
-import { Badge } from "@/src/components/ui/badge"
-import { buttonVariants } from "@/src/components/ui/button"
+import PageHeader from "@/src/components/layout/page-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
-import { cn } from "@/src/lib/utils"
 
 export const metadata: Metadata = {
   title: "Privacy Policy | Shelf",
@@ -88,21 +84,13 @@ export default function PrivacyPolicyPage() {
   return (
     <main className="min-h-svh bg-background p-6 lg:p-10">
       <section className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <Badge className="mb-2 w-fit gap-1.5">
-              <ShieldCheck className="size-3.5" />
-              Legal
-            </Badge>
-            <h1 className="text-3xl font-semibold tracking-tight">Privacy policy</h1>
-            <p className="text-muted-foreground">Last updated: April 20, 2026</p>
-          </div>
-
-          <Link href="/" className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}>
-            <ArrowLeft className="size-4" />
-            Back
-          </Link>
-        </div>
+        <PageHeader
+          title="Privacy policy"
+          description="Last updated: April 20, 2026"
+          breadcrumbCurrentLabel="Privacy"
+          breadcrumbRootLabel="Home"
+          breadcrumbRootHref="/"
+        />
 
         <Card>
           <CardHeader>
