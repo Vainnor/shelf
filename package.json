@@ -1,6 +1,6 @@
 {
   "name": "shelf",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "packageManager": "pnpm@10.33.0",
   "type": "module",
   "private": true,

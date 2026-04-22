@@ -4,9 +4,10 @@ import { desc, eq } from "drizzle-orm"
 
 import { db } from "@/src/db"
 import { booksTable } from "@/src/db/schema/book"
+import { getAllDocsPages } from "@/src/lib/docs/content"
 import { getActiveSession } from "@/src/lib/session"
 
-export type CommandTargetGroup = "books" | "settings"
+export type CommandTargetGroup = "books" | "settings" | "docs"
 
 export type CommandTarget = {
   id: string
@@ -20,6 +21,7 @@ export type CommandTarget = {
 export type CommandSearchResult = {
   books: CommandTarget[]
   settings: CommandTarget[]
+  docs: CommandTarget[]
 }
 
 function buildSettingsTargets(isAdmin: boolean): CommandTarget[] {
@@ -62,6 +64,17 @@ function buildSettingsTargets(isAdmin: boolean): CommandTarget[] {
   }
 
   return targets
+}
+
+function buildDocsTargets(): CommandTarget[] {
+  return getAllDocsPages().map((page) => ({
+    id: `docs-${page.slug}`,
+    label: page.title,
+    description: page.summary,
+    href: `/docs/${page.slug}`,
+    group: "docs" as const,
+    resultType: "Route" as const,
+  }))
 }
 
 function normalizeForFuzzy(value: string) {
@@ -124,7 +137,7 @@ function rankTargetsByQuery(targets: CommandTarget[], query: string, limit: numb
 export async function searchCommandTargets(query: string): Promise<CommandSearchResult> {
   const activeSession = await getActiveSession()
   if (!activeSession) {
-    return { books: [], settings: [] }
+    return { books: [], settings: [], docs: [] }
   }
 
   const normalized = query.trim()
@@ -137,6 +150,7 @@ export async function searchCommandTargets(query: string): Promise<CommandSearch
   })
 
   const settings = buildSettingsTargets(activeSession.user.role === "admin")
+  const docs = buildDocsTargets()
 
   return {
     books: rankTargetsByQuery(
@@ -152,5 +166,6 @@ export async function searchCommandTargets(query: string): Promise<CommandSearch
       8
     ),
     settings: rankTargetsByQuery(settings, normalized, 8),
+    docs: rankTargetsByQuery(docs, normalized, 10),
   }
 }
