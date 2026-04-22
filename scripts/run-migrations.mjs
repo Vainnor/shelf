@@ -102,8 +102,8 @@ async function main() {
   console.log(`[migrations] Selected mode: ${mode}`)
 
   // Always use --force if not running in a TTY (e.g., CI/Docker)
-  const force = !process.stdout.isTTY;
-  let result = runDrizzleCommand(mode, force)
+  const force = !process.stdout.isTTY
+  let result = runDrizzleCommand(mode, mode === "push" ? force : false)
 
   if (result.status !== 0) {
     console.warn(`[migrations] ${mode} failed, trying forced push fallback`)
@@ -131,4 +131,3 @@ main().catch((error) => {
   console.error("[migrations] Failed to run migrations", error)
   process.exit(1)
 })
-

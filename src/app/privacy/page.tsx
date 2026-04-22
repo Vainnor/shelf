@@ -95,7 +95,7 @@ export default function PrivacyPolicyPage() {
               Legal
             </Badge>
             <h1 className="text-3xl font-semibold tracking-tight">Privacy policy</h1>
-            <p className="text-muted-foreground">Last updated: April 15, 2026</p>
+            <p className="text-muted-foreground">Last updated: April 20, 2026</p>
           </div>
 
           <Link href="/" className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}>
@@ -132,4 +132,3 @@ export default function PrivacyPolicyPage() {
     </main>
   )
 }
-

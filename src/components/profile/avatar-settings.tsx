@@ -39,6 +39,7 @@ export default function AvatarSettings({ name, email, currentImage }: AvatarSett
     initialActionState
   )
   const [avatarUrl, setAvatarUrl] = useState(currentImage ?? "")
+  const [currentImageFallback, setCurrentImageFallback] = useState(currentImage ?? "")
 
   useEffect(() => {
     if (!updateState.message) {
@@ -67,7 +68,7 @@ export default function AvatarSettings({ name, email, currentImage }: AvatarSett
   }, [clearState])
 
   const initials = useMemo(() => getInitials(name, email), [email, name])
-  const displayImage = avatarUrl.trim() || currentImage || ""
+  const displayImage = avatarUrl.trim() || currentImageFallback || ""
 
   return (
     <Card>
@@ -118,6 +119,7 @@ export default function AvatarSettings({ name, email, currentImage }: AvatarSett
           action={clearAction}
           onSubmit={() => {
             setAvatarUrl("")
+            setCurrentImageFallback("")
           }}
         >
           <Button type="submit" variant="outline" disabled={clearPending}>
@@ -129,4 +131,3 @@ export default function AvatarSettings({ name, email, currentImage }: AvatarSett
     </Card>
   )
 }
-
