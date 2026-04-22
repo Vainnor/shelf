@@ -18,8 +18,6 @@ export type ProfileSummary = {
     id: string
     name: string | null
     email: string
-    username: string | null
-    publicProfileEnabled: boolean
     image: string | null
     role: UserRole
     emailVerified: boolean
@@ -55,8 +53,6 @@ export async function getProfileSummary(): Promise<ProfileSummary> {
       id: user.id,
       name: user.name,
       email: user.email,
-      username: user.username,
-      publicProfileEnabled: user.publicProfileEnabled,
       image: user.image ?? null,
       role: user.role,
       emailVerified: user.emailVerified,

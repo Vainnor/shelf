@@ -28,7 +28,6 @@ type Session = {
     name?: string
     image?: string | null
     role?: UserRole
-    username?: string | null
   }
 } | null
 
@@ -167,7 +166,6 @@ export default function EditBookPage() {
               email={session?.user?.email ?? ""}
               image={session?.user?.image}
               isAdmin={session?.user?.role === "admin"}
-              username={session?.user?.username}
             />
           </div>
         </div>

@@ -22,10 +22,6 @@ export default async function SettingsPage() {
   const settingsPanelProps: SettingsPanelProps = {
     initialName: user.name ?? "",
     initialEmail: user.email,
-    initialUsername: user.username ?? "",
-    initialPublicProfileEnabled: user.publicProfileEnabled,
-    initialPublicShowHighlights: user.publicShowHighlights,
-    initialPublicHighlightsLimit: user.publicHighlightsLimit,
     initialReadingReminderEnabled: user.readingReminderEnabled,
     initialReadingReminderChannel: user.readingReminderChannel,
     initialReadingReminderDays: user.readingReminderDays,

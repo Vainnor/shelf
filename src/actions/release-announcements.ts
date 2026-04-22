@@ -78,7 +78,6 @@ export async function upsertReleaseAnnouncementByAdmin(formData: FormData) {
   revalidatePath("/admin")
   revalidatePath("/dashboard")
   revalidatePath("/library")
-  revalidatePath("/social")
 }
 
 export async function markCurrentReleaseAnnouncementSeen(formData: FormData) {
@@ -92,7 +91,6 @@ export async function markCurrentReleaseAnnouncementSeen(formData: FormData) {
   await markReleaseAnnouncementSeen(releaseId, user.id)
   revalidatePath("/dashboard")
   revalidatePath("/library")
-  revalidatePath("/social")
 }
 
 export async function getActiveReleaseAnnouncementForViewer() {

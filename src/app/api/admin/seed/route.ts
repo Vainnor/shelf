@@ -4,14 +4,8 @@ import { sql } from "drizzle-orm"
 import { db } from "@/src/db"
 import { booksTable } from "@/src/db/schema/book"
 import {
-  bookClubActivityTable,
-  bookClubInvitesTable,
-  bookClubMembersTable,
-  bookClubPostsTable,
-  bookClubsTable,
   bookHighlightsTable,
   bookProgressEventsTable,
-  followsTable,
   notificationsTable,
   readingSessionsTable,
 } from "@/src/db/schema/reading"
@@ -27,7 +21,6 @@ type DemoUser = {
   id: string
   name: string
   email: string
-  username: string
   role: "user" | "editor" | "moderator"
   readingReminderEnabled: boolean
   readingReminderDays: number
@@ -63,7 +56,6 @@ function buildDemoUsers(): DemoUser[] {
       id: makeId("user", "alice"),
       name: "Alice Reader",
       email: "demo.alice@shelf.local",
-      username: "demo_alice",
       role: "user",
       readingReminderEnabled: true,
       readingReminderDays: 5,
@@ -72,7 +64,6 @@ function buildDemoUsers(): DemoUser[] {
       id: makeId("user", "bruno"),
       name: "Bruno Page",
       email: "demo.bruno@shelf.local",
-      username: "demo_bruno",
       role: "user",
       readingReminderEnabled: false,
       readingReminderDays: 7,
@@ -81,7 +72,6 @@ function buildDemoUsers(): DemoUser[] {
       id: makeId("user", "chloe"),
       name: "Chloe Notes",
       email: "demo.chloe@shelf.local",
-      username: "demo_chloe",
       role: "editor",
       readingReminderEnabled: true,
       readingReminderDays: 4,
@@ -90,7 +80,6 @@ function buildDemoUsers(): DemoUser[] {
       id: makeId("user", "diego"),
       name: "Diego Shelf",
       email: "demo.diego@shelf.local",
-      username: "demo_diego",
       role: "moderator",
       readingReminderEnabled: true,
       readingReminderDays: 3,
@@ -99,7 +88,6 @@ function buildDemoUsers(): DemoUser[] {
       id: makeId("user", "elena"),
       name: "Elena Chapter",
       email: "demo.elena@shelf.local",
-      username: "demo_elena",
       role: "user",
       readingReminderEnabled: false,
       readingReminderDays: 8,
@@ -108,7 +96,6 @@ function buildDemoUsers(): DemoUser[] {
       id: makeId("user", "frank"),
       name: "Frank Margin",
       email: "demo.frank@shelf.local",
-      username: "demo_frank",
       role: "user",
       readingReminderEnabled: true,
       readingReminderDays: 6,
@@ -117,7 +104,6 @@ function buildDemoUsers(): DemoUser[] {
       id: makeId("user", "grace"),
       name: "Grace Bookmark",
       email: "demo.grace@shelf.local",
-      username: "demo_grace",
       role: "user",
       readingReminderEnabled: true,
       readingReminderDays: 10,
@@ -126,7 +112,6 @@ function buildDemoUsers(): DemoUser[] {
       id: makeId("user", "hugo"),
       name: "Hugo Library",
       email: "demo.hugo@shelf.local",
-      username: "demo_hugo",
       role: "user",
       readingReminderEnabled: false,
       readingReminderDays: 7,
@@ -192,7 +177,7 @@ function buildDemoBooks(users: DemoUser[]): DemoBook[] {
 
   return users.flatMap((user, userIndex) =>
     templates.map((template, templateIndex) => ({
-      id: makeId("book", user.username, template.suffix),
+      id: makeId("book", user.id, template.suffix),
       userId: user.id,
       title: `${template.title} ${userIndex + 1}`,
       author: template.author,
@@ -214,9 +199,6 @@ function buildSeedSummary() {
   return {
     users: users.length,
     books: books.length,
-    follows: 11,
-    clubs: 2,
-    memberships: 6,
     notifications: users.length * 3,
   }
 }
@@ -227,12 +209,6 @@ async function cleanupSeedData() {
     "book_highlights",
     "reading_sessions",
     "book_progress_events",
-    "book_club_activity",
-    "book_club_invites",
-    "book_club_posts",
-    "book_club_members",
-    "book_clubs",
-    "follows",
     "books",
     "users",
   ] as const
@@ -357,12 +333,8 @@ export async function GET() {
           id: user.id,
           name: user.name,
           email: user.email,
-          username: user.username,
           role: user.role,
           emailVerified: true,
-          publicProfileEnabled: true,
-          publicShowHighlights: index % 2 === 0,
-          publicHighlightsLimit: 3,
           readingReminderEnabled: user.readingReminderEnabled,
           readingReminderChannel: "email",
           readingReminderDays: user.readingReminderDays,
@@ -387,145 +359,6 @@ export async function GET() {
         }))
       )
       .onConflictDoNothing({ target: booksTable.id })
-
-    const follows = [
-      [users[0], users[1]],
-      [users[0], users[2]],
-      [users[1], users[0]],
-      [users[2], users[0]],
-      [users[2], users[3]],
-      [users[3], users[2]],
-      [users[4], users[0]],
-      [users[5], users[0]],
-      [users[6], users[3]],
-      [users[7], users[1]],
-      [users[7], users[2]],
-    ]
-
-    await db
-      .insert(followsTable)
-      .values(
-        follows.map(([follower, following]) => ({
-          id: makeId("follow", follower.username, following.username),
-          followerId: follower.id,
-          followingId: following.id,
-          createdAt: daysAgo(20),
-        }))
-      )
-      .onConflictDoNothing({ target: followsTable.id })
-
-    const clubs = [
-      {
-        id: makeId("club", "fantasy-circle"),
-        ownerId: users[0].id,
-        name: "Fantasy Circle",
-        description: "Epic fantasy reads and monthly check-ins.",
-      },
-      {
-        id: makeId("club", "sci-fi-lab"),
-        ownerId: users[2].id,
-        name: "Sci-Fi Lab",
-        description: "Speculative fiction, hard sci-fi, and space opera picks.",
-      },
-    ]
-
-    await db
-      .insert(bookClubsTable)
-      .values(
-        clubs.map((club) => ({
-          ...club,
-          isPublic: true,
-          createdAt: daysAgo(45),
-          updatedAt: daysAgo(2),
-        }))
-      )
-      .onConflictDoNothing({ target: bookClubsTable.id })
-
-    const memberships = [
-      { clubId: clubs[0].id, userId: users[0].id, role: "owner" as const },
-      { clubId: clubs[0].id, userId: users[1].id, role: "member" as const },
-      { clubId: clubs[0].id, userId: users[3].id, role: "moderator" as const },
-      { clubId: clubs[1].id, userId: users[2].id, role: "owner" as const },
-      { clubId: clubs[1].id, userId: users[4].id, role: "member" as const },
-      { clubId: clubs[1].id, userId: users[5].id, role: "member" as const },
-    ]
-
-    await db
-      .insert(bookClubMembersTable)
-      .values(
-        memberships.map((member) => ({
-          id: makeId("membership", member.clubId, member.userId),
-          clubId: member.clubId,
-          userId: member.userId,
-          role: member.role,
-          createdAt: daysAgo(35),
-        }))
-      )
-      .onConflictDoNothing({ target: bookClubMembersTable.id })
-
-    await db
-      .insert(bookClubPostsTable)
-      .values([
-        {
-          id: makeId("post", "fantasy", "welcome"),
-          clubId: clubs[0].id,
-          authorUserId: users[3].id,
-          title: "Welcome to Fantasy Circle",
-          body: "Introduce yourself and share your current fantasy read.",
-          isAnnouncement: true,
-          createdAt: daysAgo(12),
-          updatedAt: daysAgo(12),
-        },
-        {
-          id: makeId("post", "scifi", "thread"),
-          clubId: clubs[1].id,
-          authorUserId: users[2].id,
-          title: "Best first-contact stories",
-          body: "Drop your top recommendations for first-contact novels.",
-          isAnnouncement: false,
-          createdAt: daysAgo(8),
-          updatedAt: daysAgo(7),
-        },
-      ])
-      .onConflictDoNothing({ target: bookClubPostsTable.id })
-
-    await db
-      .insert(bookClubInvitesTable)
-      .values([
-        {
-          id: makeId("invite", "fantasy", users[6].id),
-          clubId: clubs[0].id,
-          inviterUserId: users[3].id,
-          invitedUserId: users[6].id,
-          role: "member",
-          status: "pending",
-          createdAt: daysAgo(3),
-          updatedAt: daysAgo(3),
-        },
-      ])
-      .onConflictDoNothing({ target: bookClubInvitesTable.id })
-
-    await db
-      .insert(bookClubActivityTable)
-      .values([
-        {
-          id: makeId("activity", "fantasy", "announce"),
-          clubId: clubs[0].id,
-          actorUserId: users[3].id,
-          activityType: "discussion_posted",
-          details: "Posted welcome announcement",
-          createdAt: daysAgo(12),
-        },
-        {
-          id: makeId("activity", "scifi", "thread"),
-          clubId: clubs[1].id,
-          actorUserId: users[2].id,
-          activityType: "discussion_posted",
-          details: "Posted first-contact discussion",
-          createdAt: daysAgo(8),
-        },
-      ])
-      .onConflictDoNothing({ target: bookClubActivityTable.id })
 
     const readAndReadingBooks = books.filter((book) => book.status !== "to_read")
 
@@ -614,7 +447,7 @@ export async function GET() {
 
     const notifications = users.flatMap((user, index) => [
       {
-        id: makeId("notification", user.username, "welcome"),
+        id: makeId("notification", user.id, "welcome"),
         userId: user.id,
         type: "system.info",
         title: "Welcome to Shelf demo",
@@ -626,24 +459,24 @@ export async function GET() {
         updatedAt: daysAgo(2),
       },
       {
-        id: makeId("notification", user.username, "social"),
+        id: makeId("notification", user.id, "info"),
         userId: user.id,
-        type: "social.follow",
-        title: "New follower",
-        body: `@${users[(index + 1) % users.length]?.username ?? "demo"} followed your profile.`,
-        href: `/u/${user.username}`,
+        type: "system.info",
+        title: "Workspace activity",
+        body: "New activity was recorded in your workspace.",
+        href: "/dashboard",
         isRead: index % 2 === 0,
         readAt: index % 2 === 0 ? daysAgo(1) : null,
         createdAt: daysAgo(1),
         updatedAt: daysAgo(1),
       },
       {
-        id: makeId("notification", user.username, "club"),
+        id: makeId("notification", user.id, "update"),
         userId: user.id,
-        type: "club.announcement",
-        title: "Club update",
-        body: "A new announcement was posted in one of your clubs.",
-        href: "/social",
+        type: "system.info",
+        title: "Workspace update",
+        body: "A new system update is available in your dashboard.",
+        href: "/dashboard",
         isRead: false,
         readAt: null,
         createdAt: daysAgo(0),
@@ -665,8 +498,6 @@ export async function GET() {
       metadata: {
         users: users.length,
         books: books.length,
-        follows: follows.length,
-        clubs: clubs.length,
         notifications: notifications.length,
       },
     })
@@ -677,9 +508,6 @@ export async function GET() {
       summary: {
         users: users.length,
         books: books.length,
-        follows: follows.length,
-        clubs: clubs.length,
-        memberships: memberships.length,
         notifications: notifications.length,
       },
     })
@@ -691,4 +519,3 @@ export async function GET() {
     )
   }
 }
-

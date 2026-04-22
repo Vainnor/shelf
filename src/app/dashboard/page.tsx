@@ -38,7 +38,6 @@ type Session = {
     name?: string
     image?: string | null
     role?: UserRole
-    username?: string | null
   }
 } | null
 type WeeklyInsights = Awaited<ReturnType<typeof getWeeklyInsights>> | null
@@ -285,7 +284,6 @@ export default function DashboardPage() {
               email={session?.user?.email ?? ""}
               image={session?.user?.image}
               isAdmin={session?.user?.role === "admin"}
-              username={session?.user?.username}
             />
           </div>
         </div>

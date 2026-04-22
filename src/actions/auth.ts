@@ -19,8 +19,6 @@ export async function getSession() {
         email: activeSession.user.email,
         image: activeSession.user.image,
         role: activeSession.user.role,
-        username: activeSession.user.username,
-        publicProfileEnabled: activeSession.user.publicProfileEnabled,
       },
     }
   } catch (error) {

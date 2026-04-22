@@ -1,7 +1,7 @@
 "use client"
 
 import { Command, Search } from "lucide-react"
-import { BookOpen, Clock3, Settings, Users, UserCircle2 } from "lucide-react"
+import { BookOpen, Clock3, Settings } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react"
 
@@ -25,8 +25,6 @@ function isTypingTarget(target: EventTarget | null) {
 
 const EMPTY_RESULTS: CommandSearchResult = {
   books: [],
-  clubs: [],
-  users: [],
   settings: [],
 }
 
@@ -42,7 +40,6 @@ const MAX_RECENT_ITEMS = 8
 export default function GlobalCommandBar() {
   const router = useRouter()
   const pathname = usePathname()
-
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
   const [loading, setLoading] = useState(false)
@@ -58,8 +55,6 @@ export default function GlobalCommandBar() {
           ? [{ key: "recent" as const, title: "Recent", items: recentItems }]
           : []),
         { key: "books", title: "Books", items: results.books },
-        { key: "clubs", title: "Clubs", items: results.clubs },
-        { key: "users", title: "Users", items: results.users },
         { key: "settings", title: "Settings", items: results.settings },
       ]
 
@@ -174,16 +169,12 @@ export default function GlobalCommandBar() {
 
   function getSectionIcon(sectionKey: Section["key"]) {
     if (sectionKey === "books") return BookOpen
-    if (sectionKey === "clubs") return Users
-    if (sectionKey === "users") return UserCircle2
     if (sectionKey === "settings") return Settings
     return Clock3
   }
 
   function getItemIcon(item: CommandTarget) {
     if (item.group === "books") return BookOpen
-    if (item.group === "clubs") return Users
-    if (item.group === "users") return UserCircle2
     return Settings
   }
 
@@ -247,7 +238,9 @@ export default function GlobalCommandBar() {
                   ref={inputRef}
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search books, clubs, users, settings..."
+                  placeholder={
+                    "Search books and settings..."
+                  }
                   className="border-none bg-transparent px-0 shadow-none focus-visible:ring-0"
                 />
               </div>

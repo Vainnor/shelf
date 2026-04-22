@@ -33,7 +33,7 @@ export default async function AdminAuditPage({ searchParams }: AuditPageProps) {
   await requireAdminUser()
 
   const params = (await searchParams) ?? {}
-  const scope = params.scope === "admin" || params.scope === "social" || params.scope === "club" ? params.scope : undefined
+  const scope = params.scope === "admin" ? params.scope : undefined
   const actor = params.actor?.trim() || undefined
   const action = params.action?.trim() || undefined
   const from = parseOptionalDate(params.from)
@@ -63,7 +63,7 @@ export default async function AdminAuditPage({ searchParams }: AuditPageProps) {
               Admin
             </Badge>
             <h1 className="text-3xl font-semibold tracking-tight">Audit logs</h1>
-            <p className="text-muted-foreground">Recent administrative and moderation events.</p>
+            <p className="text-muted-foreground">Recent administrative and operational events.</p>
           </div>
           <Link href="/admin" className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}>
             <ArrowLeft className="size-4" />
@@ -81,8 +81,6 @@ export default async function AdminAuditPage({ searchParams }: AuditPageProps) {
               <select name="scope" defaultValue={scope ?? ""} className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm">
                 <option value="">All scopes</option>
                 <option value="admin">Admin</option>
-                <option value="social">Social</option>
-                <option value="club">Club</option>
               </select>
               <input
                 name="actor"

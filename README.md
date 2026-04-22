@@ -2,7 +2,7 @@
 
 Shelf is a self-hosted reading tracker built with Next.js, Better Auth, Drizzle ORM, PostgreSQL, and shadcn/ui.
 
-It supports personal reading workflows, social features, club collaboration, and admin operations for managing a hosted instance.
+It supports personal reading workflows and admin operations for managing a hosted instance.
 
 ## Features
 
@@ -16,24 +16,13 @@ It supports personal reading workflows, social features, club collaboration, and
 - Weekly insights and best-books-this-year summaries
 - Rule-based recommendations from completed books and community ratings
 
-### Social and clubs
-
-- Public profiles (`/u/[username]`) with follow/unfollow
-- Social feed from followed users
-- Book clubs with:
-  - public discovery
-  - join/leave
-  - invites and responses
-  - member roles (`owner`, `moderator`, `member`)
-  - shared club shelf and posts
-
 ### Account and admin
 
 - Email/password auth via Better Auth
 - Optional OAuth providers (when env vars are configured)
 - Optional custom OAuth providers for self-hosted identity systems
 - Reading reminder preferences (channel + inactivity threshold)
-- User settings: profile, reminders, public profile, password reset, account export/delete
+- User settings: profile, reminders, password reset, account export/delete
 - Admin dashboard: users, signup policy, audit logs, health checks, backup tools
 - Full-database JSON export/import in admin backup tools
 
@@ -50,7 +39,7 @@ It supports personal reading workflows, social features, club collaboration, and
 
 ```text
 src/
-  app/                 # Routes/pages (dashboard, library, social, clubs, admin, auth)
+  app/                 # Routes/pages (dashboard, library, admin, auth)
   actions/             # Server actions
   components/          # UI and feature components
   db/                  # Drizzle db setup + schema
@@ -136,7 +125,7 @@ NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3000
 DATABASE_URL=
 ```
 
-### Optional social OAuth providers
+### Optional OAuth providers
 
 Enable by setting both `*_CLIENT_ID` and `*_CLIENT_SECRET` for each provider:
 

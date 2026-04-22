@@ -16,10 +16,9 @@ const sections = [
   {
     title: "Data we collect",
     points: [
-      "Account details such as your name, email address, profile picture, username, and authentication metadata.",
+      "Account details such as your name, email address, profile picture, and authentication metadata.",
       "Reading data you add, including books, ISBNs, shelves/status, page counts, notes, reviews, ratings, tags, collections, and progress history.",
-      "Social and community activity such as follows, public profile settings, club membership, club posts, and club moderation actions.",
-      "Preference data such as reminder settings, notification choices, and visibility settings you choose for your profile.",
+      "Preference data such as reminder settings and notification choices.",
       "Operational records such as sessions, audit logs, and basic request metadata needed to keep the app secure and functional.",
     ],
   },
@@ -28,7 +27,6 @@ const sections = [
     points: [
       "To create and secure accounts, authenticate sessions, and keep your account accessible across devices.",
       "To power book tracking features, progress dashboards, reminders, recommendations, reading insights, and export/delete tools.",
-      "To support optional social features like public profiles, followers, clubs, shared shelves, and club activity feeds.",
       "To operate admin features, detect abuse, and record meaningful moderation or configuration changes in audit logs.",
       "To send transactional email such as password resets, reminders, and important account notifications.",
     ],
@@ -38,7 +36,6 @@ const sections = [
     points: [
       "Shelf does not sell your personal data.",
       "Data may be processed by infrastructure providers that host the app, database, file storage, authentication, or email services used by your deployment.",
-      "If you enable social features, some profile and reading information may be visible to other users according to your visibility settings.",
       "Self-hosted deployments control their own third-party services, so the exact processors can vary by installation.",
     ],
   },
@@ -61,15 +58,14 @@ const sections = [
     title: "Security",
     points: [
       "We use authenticated sessions, role-based access controls, and admin-level safeguards for sensitive actions.",
-      "Important administrative and social changes may be recorded in audit logs so operators can review abuse, moderation, or configuration events.",
+      "Important administrative changes may be recorded in audit logs so operators can review abuse, moderation, or configuration events.",
       "No system is perfectly secure, but we try to keep access limited to the smallest practical set of accounts and services.",
     ],
   },
   {
     title: "Your choices",
     points: [
-      "You can update your profile, reading data, reminder preferences, and visibility settings through the app.",
-      "You can disable public profile features and control whether your reading activity is shared through social features.",
+      "You can update your profile, reading data, and reminder preferences through the app.",
       "You can delete your account or request an export if you no longer want to use the service.",
     ],
   },
@@ -99,7 +95,7 @@ export default function PrivacyPolicyPage() {
               Legal
             </Badge>
             <h1 className="text-3xl font-semibold tracking-tight">Privacy policy</h1>
-            <p className="text-muted-foreground">Last updated: April 15, 2026</p>
+            <p className="text-muted-foreground">Last updated: April 20, 2026</p>
           </div>
 
           <Link href="/" className={cn(buttonVariants({ variant: "outline", size: "default" }), "gap-2")}>
@@ -112,7 +108,7 @@ export default function PrivacyPolicyPage() {
           <CardHeader>
             <CardTitle>How Shelf handles your data</CardTitle>
             <CardDescription>
-              This policy explains how Shelf handles account, reading, and social data in a self-hosted or managed
+              This policy explains how Shelf handles account, reading, and operational data in a self-hosted or managed
               deployment.
             </CardDescription>
           </CardHeader>
@@ -136,4 +132,3 @@ export default function PrivacyPolicyPage() {
     </main>
   )
 }
-
