@@ -1,6 +1,17 @@
 "use client"
 
-import { Bell, BookOpen, ChevronDown, KanbanSquare, LayoutDashboard, LogOut, Settings, Shield, UserRound } from "lucide-react"
+import {
+  AlarmClock,
+  Bell,
+  BookOpen,
+  ChevronDown,
+  KanbanSquare,
+  LayoutDashboard,
+  LogOut,
+  Settings,
+  Shield,
+  UserRound,
+} from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
@@ -115,6 +126,14 @@ export default function ProfileMenu({
         >
           <KanbanSquare className="size-4" />
           Board
+        </Link>
+
+        <Link
+          href="/timer"
+          className="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-muted"
+        >
+          <AlarmClock className="size-4" />
+          Timer
         </Link>
 
         <Link
